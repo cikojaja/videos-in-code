@@ -1,0 +1,620 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Google vs Claude reel</title>
+<style>
+/* Friday reel "This is Google. This is Claude." 1080x1920. Every frame = seek(t), a pure function of time (timing.js = the voice's word onsets). */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root { --sf: system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif; }
+html, body { width: 1080px; height: 1920px; overflow: hidden; background: #F4F4F1; font-family: var(--sf); }
+#frame { position: relative; width: 1080px; height: 1920px; overflow: hidden; }
+.scene { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; overflow: hidden; visibility: hidden;
+  background: radial-gradient(120% 75% at 50% 30%, #FFFFFF 0%, #E9E9E4 100%); }
+.floor { position: absolute; left: 0; top: 0; }
+.cam { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; transform-origin: 0 0; }
+.cam > *, .grp > *, .clip > *, .abs { position: absolute; }
+.grp { left: 0; top: 0; width: 0; height: 0; }
+.tile { display: grid; place-items: center; background: #fff; box-shadow: 0 12px 0 #DADAD4, 0 34px 50px -18px rgba(0,0,0,.3); transform-origin: 50% 100%; }
+.sbox { height: 110px; border-radius: 55px; background: #fff; display: flex; align-items: center; gap: 16px; padding: 0 34px; font: 500 34px var(--sf); color: #8A8A85;
+  transform: perspective(900px) rotateX(48deg); box-shadow: 0 14px 0 #DADAD4, 0 40px 60px -20px rgba(0,0,0,.28); }
+.caret { display: block; width: 3px; height: 40px; background: #4A4A46; border-radius: 2px; margin-right: -6px; }
+.ring { height: 110px; border-radius: 55px; border: 6px solid #C9923E; box-shadow: 0 0 44px rgba(201,146,62,.75), inset 0 0 20px rgba(201,146,62,.35); transform: perspective(900px) rotateX(48deg); opacity: 0; }
+.flash { height: 150px; border-radius: 75px; border: 7px solid #C9923E; box-shadow: 0 0 70px rgba(201,146,62,.65), inset 0 0 30px rgba(201,146,62,.3); transform: perspective(900px) rotateX(48deg); opacity: 0; }
+.shadow, .cshadow, .lshadow { border-radius: 50%; background: radial-gradient(closest-side, rgba(0,0,0,.25), rgba(0,0,0,0)); filter: blur(5px); }
+.card { background: #fff; border-radius: 16px; box-shadow: 0 10px 0 #DADAD4, 0 30px 44px -16px rgba(0,0,0,.24); overflow: hidden; }
+.clip { overflow: hidden; }
+.lbl { text-align: center; font: 800 44px/1.12 var(--sf); color: #1a1a1a; letter-spacing: -.02em; transform-origin: 50% 0; }
+.row { height: 52px; } .row b { display: block; height: 13px; border-radius: 7px; background: #4285F4; transform-origin: 0 50%; } .row i { display: block; margin-top: 9px; height: 7px; border-radius: 4px; background: #1FB441; opacity: .7; transform-origin: 0 50%; }
+svg .ln, svg.ln path { fill: none; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1 2; }
+.num { font: 900 300px/1 var(--sf); color: #C9923E; letter-spacing: 0; transform-origin: 50% 80%;
+  text-shadow: 1px 1px 0 #B07F33, 2px 2px 0 #AB7A30, 3px 3px 0 #A6762D, 4px 4px 0 #A1722B, 5px 5px 0 #9C6E28, 6px 6px 0 #976A26, 7px 7px 0 #926623, 8px 8px 0 #8D6221, 9px 9px 0 #885E1F, 10px 10px 0 #835A1D, 14px 18px 30px rgba(0,0,0,.22); }
+.tile2.ghost { background: transparent; box-shadow: none; outline: 4px dashed #CFCAC0; outline-offset: -4px; } .tile2.ghost > * { visibility: hidden; }
+.tile2 { width: 200px; padding: 18px 0 16px; border-radius: 30px; background: #fff; display: grid; justify-items: center; gap: 4px; font: 700 29px/1.1 var(--sf); color: #3a3a37; text-align: center;
+  box-shadow: 0 10px 0 #DADAD4, 0 30px 40px -18px rgba(0,0,0,.25); transform-origin: 50% 100%; }
+.divider { width: 5px; background: repeating-linear-gradient(#C3C3BB 0 16px, transparent 16px 30px); transform-origin: 50% 0; }
+.check { width: 62px; height: 62px; border-radius: 50%; background: #C9923E; display: grid; place-items: center; box-shadow: 0 5px 0 #9C6E28; }
+.bubble { max-width: 700px; padding: 26px 34px 28px; border-radius: 34px 34px 8px 34px; background: #EFEBE2; font: 600 50px/1.22 var(--sf); color: #1a1a1a; letter-spacing: -.015em;
+  box-shadow: 0 8px 0 #DCD6CA, 0 26px 40px -18px rgba(0,0,0,.2); transform-origin: 100% 100%; }
+.bubble .cr { display: inline-block; width: 4px; height: 46px; margin-left: 3px; vertical-align: -8px; background: #D97757; border-radius: 2px; }
+.reply { padding: 30px 40px 26px; border-radius: 30px; }
+.reply .rr { display: flex; align-items: center; gap: 20px; height: 70px; font: 700 44px var(--sf); color: #55524c; letter-spacing: -.02em; }
+.reply .rh { display: flex; align-items: center; gap: 14px; height: 54px; font: 700 32px var(--sf); color: #1a1a1a; }
+.reply .rh i { display: flex; gap: 7px; margin-left: 6px; } .reply .rh i b { width: 11px; height: 11px; border-radius: 50%; background: #D97757; }
+.reply .res { margin-top: 14px; padding: 22px 26px; border-radius: 22px; background: #F9E1D3; font: 800 56px/1.06 var(--sf); transform-origin: 30% 50%; color: #1a1a1a; letter-spacing: -.025em; }
+.vig { left: -1000px; top: -1000px; width: 3080px; height: 3920px; background: radial-gradient(closest-side at 50% 50%, rgba(0,0,0,0) 22%, rgba(20,16,10,.15) 62%); pointer-events: none; }
+.xbadge { width: 76px; height: 76px; border-radius: 50%; background: #FF3B30; display: grid; place-items: center; box-shadow: 0 6px 0 #C2261D, 0 14px 24px -8px rgba(0,0,0,.35); }
+.menu { padding: 38px 40px; border-radius: 26px; overflow: visible; }
+.menu .mt { font: 800 44px Georgia, "Times New Roman", serif; letter-spacing: .08em; color: #1a1a1a; text-align: center; padding-bottom: 18px; border-bottom: 3px solid #1a1a1a; margin-bottom: 18px; }
+.menu .dish { height: 84px; display: flex; align-items: center; padding-left: 18px; font: 600 36px var(--sf); color: #1a1a1a; border-bottom: 2px dashed #D3D3CC; }
+.term { border-radius: 30px; background: #0E0E0E; color: #EDEAE3; padding: 0 0 26px; overflow: hidden; box-shadow: 0 12px 0 #2a2a2a, 0 50px 70px -30px rgba(0,0,0,.45); }
+.term .tbar { height: 54px; display: flex; align-items: center; gap: 10px; padding: 0 22px; background: #1B1B1B; }
+.term .tbar i { width: 16px; height: 16px; border-radius: 50%; display: block; }
+.term .tbar span { flex: 1; text-align: center; margin-right: 70px; font: 600 24px var(--sf); color: #8F8B84; }
+.term .thead { display: flex; align-items: center; gap: 26px; padding: 26px 36px 12px; }
+.term .thead b { display: block; font: 800 46px var(--sf); color: #fff; letter-spacing: -.02em; }
+.term .thead small { display: block; font: 500 26px ui-monospace, "SF Mono", Menlo, monospace; color: #8F8B84; margin-top: 4px; }
+.term .tline { padding: 14px 36px 10px; font: 600 37px ui-monospace, "SF Mono", Menlo, monospace; color: #E0B163; white-space: nowrap; }
+.term .tline .pr { color: #D97757; }
+.term .tcr { display: inline-block; width: 17px; height: 36px; background: #E0B163; vertical-align: -6px; margin-left: 4px; }
+.term .tcheck { padding: 4px 36px; font: 600 35px ui-monospace, "SF Mono", Menlo, monospace; color: #EDEAE3; }
+.term .tcheck .ok { color: #3FD07A; }
+.cpill { display: flex; align-items: center; gap: 20px; padding: 0 34px 0 22px; border-radius: 56px; background: #fff; box-shadow: 0 10px 0 #DADAD4, 0 30px 40px -18px rgba(0,0,0,.25); }
+.cpill .cav { width: 72px; height: 72px; border-radius: 50%; background: #E4E2DC; display: grid; place-items: center; flex: none; }
+.cpill .cin { flex: 1; font: 500 38px var(--sf); color: #9A968E; white-space: nowrap; }
+.cpill .cin b { font: 900 48px var(--sf); color: #C9923E; letter-spacing: .05em; }
+.cpill .ccr { display: inline-block; width: 4px; height: 46px; background: #1a1a1a; vertical-align: -8px; margin-left: 4px; }
+.cpill .cpost { font: 700 38px var(--sf); color: #B8D9F5; }
+.pdf { border-radius: 24px; background: #0A0A0A; color: #F0EDE6; padding: 36px 32px; display: flex; flex-direction: column; justify-content: space-between; transform-origin: 50% 60%;
+  box-shadow: 0 0 0 5px #C9923E, 0 16px 0 #2a2a2a, 0 50px 90px -20px rgba(201,146,62,.6); }
+.pdf small { font: 700 21px var(--sf); letter-spacing: .2em; color: #E0B163; }
+.pdf p { font: 900 54px/1.02 var(--sf); letter-spacing: -.03em; } .pdf p span { color: #E0B163; }
+.pdf i { font: 800 32px/1.2 var(--sf); color: #E0B163; font-style: normal; letter-spacing: .05em; }
+.pdf { overflow: hidden; } .pdf .shine { position: absolute; top: -40%; left: 0; width: 34%; height: 180%; background: linear-gradient(90deg, rgba(255,226,160,0), rgba(255,226,160,.38), rgba(255,226,160,0)); transform: translateX(-200%) rotate(18deg); pointer-events: none; }
+.strike { position: absolute; height: 10px; border-radius: 5px; background: #FF3B30; transform-origin: 0 50%; }
+.disc { left: 0; width: 1080px; text-align: center; } .disc span { display: inline-block; padding: 10px 26px; border-radius: 999px; background: #fff; font: 600 32px var(--sf); color: #4E4B45; box-shadow: 0 6px 0 #DADAD4; }
+#supers, #over { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; pointer-events: none; }
+.super { position: absolute; left: 40px; width: 1000px; top: 236px; text-align: center; font: 800 96px/1.04 var(--sf); letter-spacing: -.045em; color: #0A0A0A; visibility: hidden; }
+.super .ln { white-space: nowrap; }
+.super .w { display: inline-block; margin: 0 .13em; transform-origin: 50% 85%; }
+.super .o { color: #D97757; } .super .g { color: #C9923E; }
+.super svg.wm { display: inline-block; vertical-align: -0.17em; margin-left: .16em; }
+.super .ph { display: inline-block; width: 102px; height: 10px; }
+.super.big { top: 250px; font-size: 128px; }
+.super.light { color: #F0EDE6; }
+/* Ciko's own world for the ending: warm black, a slow gold light, gold grid (option B, 24 Oct) */
+.scene.dark { background: radial-gradient(120% 75% at 50% 22%, #1E1812 0%, #0D0B09 58%, #060504 100%); }
+.scene.dark .floor path { stroke: rgba(201,146,62,.34); }
+.leak { left: -300px; top: -300px; width: 1680px; height: 1100px; border-radius: 50%; background: radial-gradient(closest-side, rgba(224,177,99,.30), rgba(201,146,62,.10) 55%, rgba(201,146,62,0) 100%); filter: blur(30px); pointer-events: none; }
+.vig2 { left: -200px; top: -200px; width: 1480px; height: 2320px; background: radial-gradient(closest-side at 50% 45%, rgba(0,0,0,0) 55%, rgba(0,0,0,.55) 100%); pointer-events: none; }
+.scene.dark .term { box-shadow: 0 0 0 2px rgba(201,146,62,.5), 0 0 60px rgba(201,146,62,.18), 0 40px 90px -20px rgba(0,0,0,.85); }
+.scene.dark .cpill { background: #F6F3EE; box-shadow: 0 10px 0 #2A241C, 0 30px 50px -18px rgba(0,0,0,.6); }
+.scene.dark .disc span { background: #1C1915; color: #C9C2B6; box-shadow: 0 0 0 1px rgba(201,146,62,.35); }
+.super.huge { top: 330px; font: 900 250px/1 var(--sf); color: #C9923E; letter-spacing: -.04em;
+  text-shadow: 1px 1px 0 #B07F33, 2px 2px 0 #AB7A30, 3px 3px 0 #A6762D, 4px 4px 0 #A1722B, 5px 5px 0 #9C6E28, 6px 6px 0 #976A26, 7px 7px 0 #926623, 8px 8px 0 #8D6221, 9px 9px 0 #885E1F, 10px 10px 0 #835A1D, 14px 18px 30px rgba(0,0,0,.22); }
+.uline { position: absolute; height: 12px; border-radius: 6px; background: #C9923E; transform-origin: 0 50%; }
+#badge { position: absolute; left: 0; top: 0; width: 92px; height: 92px; border-radius: 50%; background: #C9923E; color: #fff; display: grid; place-items: center; font: 800 62px/1 var(--sf); box-shadow: 0 6px 0 #9C6E28; visibility: hidden; }
+#fly, #bigN { position: absolute; left: 0; top: 0; transform-origin: 0 0; visibility: hidden; }
+#bigN { font-size: 560px; }
+.super.mid { font-size: 80px; }
+#safe { position: absolute; inset: 0; display: none; }
+</style></head>
+<body>
+<div id="frame"><div id="scenes"></div><div id="supers"></div><div id="over"></div>
+<svg id="safe" width="1080" height="1920"><path d="M0 200H1080M0 1480H1080M120 0V1920M960 0V1920" stroke="red" stroke-width="3" fill="none"/></svg>
+<svg width="0" height="0" style="position:absolute"><defs id="defs"></defs></svg></div>
+<script src="words.js"></script><script src="timing.js"></script><script src="assets.js"></script>
+<script>
+(() => {
+const { T, DUR, W } = TIMING, A = ASSETS;
+const OR = '#D97757', GOLD = '#C9923E', GREEN = '#1FB441', BLUE = '#4285F4', INK = '#1a1a1a';
+const $ = (id) => document.getElementById(id);
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const prog = (t, a, d) => clamp((t - a) / d);
+const eo = (x) => 1 - (1 - x) ** 3, eo5 = (x) => 1 - (1 - x) ** 5, ei = (x) => x ** 3, eio = (x) => (x < 0.5 ? 4 * x ** 3 : 1 - (-2 * x + 2) ** 3 / 2);
+const mix = (a, b, x) => a + (b - a) * x;
+const spring = (tt, k = 16, f = 24) => (tt <= 0 ? 0 : 1 - Math.exp(-tt * k) * Math.cos(tt * f));
+const wobble = (tt, a = 1, k = 9, f = 24) => (tt <= 0 ? 0 : a * Math.exp(-tt * k) * Math.sin(tt * f));
+const pulse = (t, t0, d = 0.3) => (t < t0 ? 0 : t - t0 < 0.06 ? (t - t0) / 0.06 : Math.exp(-(t - t0 - 0.06) / d));
+const popO = (t, t0) => clamp((t - t0) / 0.06);
+
+// ---------- tiny style setters ----------
+function put(el, o = {}) {
+  const { x = 0, y = 0, s = 1, sx = 1, sy = 1, r = 0, pre = '', post = '' } = o, op = o.o ?? 1;
+  if (op <= 0.002) { el.style.visibility = 'hidden'; return; }
+  el.style.visibility = '';
+  el.style.opacity = op >= 0.998 ? '' : op.toFixed(3);
+  el.style.transform = `${pre}translate(${x.toFixed(2)}px,${y.toFixed(2)}px) rotate(${r.toFixed(2)}deg) scale(${(s * sx).toFixed(4)},${(s * sy).toFixed(4)})${post}`;
+  if ('blur' in o) el.style.filter = o.blur > 0.25 ? `blur(${o.blur.toFixed(2)}px)` : '';
+}
+const popIn = (el, t, t0, extra = {}) => put(el, { s: spring(t - t0), o: popO(t, t0), ...extra });
+function draw(el, p) { el.style.strokeDashoffset = (1 - p).toFixed(4); el.style.opacity = p > 0.001 ? '' : '0'; }
+function drop(t, tl, h = 600, d = 0.2) {
+  if (t < tl - d) return { y: -h, sx: 1, sy: 1, o: 0, h: 1 };
+  if (t < tl) { const x = (t - tl + d) / d; return { y: -h * (1 - x * x), sx: 0.95, sy: 1.06, o: 1, h: 1 - x * x }; }
+  const tt = t - tl, q = Math.exp(-tt * 13) * Math.cos(tt * 30);
+  return { y: 0, sx: 1 + 0.13 * q, sy: 1 - 0.17 * q, o: 1, h: 0 };
+}
+const shadowFor = (el, h, o = 1) => put(el, { s: 1 - 0.55 * h, o: o * (1 - 0.8 * h) });
+
+// ---------- logos + drawings ----------
+const gSvg = (s) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24">${A.G}</svg>`;
+const cSvg = (s) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24"><path d="${A.CL}" fill="${OR}"/></svg>`;
+const wm = (h) => `<svg class="wm" height="${h}" width="${Math.round((h * 272) / 92)}" viewBox="0 0 272 92">${A.WM}</svg>`;
+const MASCOT = [' ▐▛███▛█', '▝▜██████▀', '  ▝▝ ▝▝'], Q = { '█': '1111', '▐': '0101', '▛': '1110', '▜': '1101', '▝': '0100', '▀': '1100', ' ': '0000' };
+function mascot(cell) {
+  let r = '';
+  MASCOT.forEach((row, y) => [...row].forEach((ch, x) => [...Q[ch]].forEach((on, q) => {
+    if (on === '1') r += `<rect x="${x * cell + (q % 2) * cell / 2}" y="${y * 2 * cell + (q >> 1) * cell}" width="${cell / 2 + 0.6}" height="${cell + 0.6}"/>`;
+  })));
+  return `<svg width="${9 * cell}" height="${6 * cell}" viewBox="0 0 ${9 * cell} ${6 * cell}"><g fill="${OR}">${r}</g></svg>`;
+}
+const SEARCH = `<svg viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="#8A8A85" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 L21 21"/></svg>`;
+const ICON = {
+  news: 'M6 9h30v30H6z M36 15h6v20a4 4 0 0 1-4 4 M11 16h20 M11 22h20 M11 28h12',
+  clock: 'M24 8a16 16 0 1 1 0 32a16 16 0 1 1 0-32 M24 14v10l7 5',
+  tag: 'M8 24 24 8h14v14L22 38z M31 12a3 3 0 1 1 0 6a3 3 0 1 1 0-6',
+  pen: 'M10 38l4-12 18-18 8 8-18 18z M28 12l8 8',
+  cal: 'M11 11h26a3 3 0 0 1 3 3v23a3 3 0 0 1-3 3H11a3 3 0 0 1-3-3V14a3 3 0 0 1 3-3z M8 19h32 M16 7v8 M32 7v8',
+  bulb: 'M18 33h12 M19 38h10 M24 7a11 11 0 0 0-7 19.5V30h14v-3.5A11 11 0 0 0 24 7z',
+};
+const icon = (k, color, id = '', drawn = false) => `<svg viewBox="0 0 48 48" width="106" height="106"><path ${id ? `id="${id}"` : ''} ${drawn ? 'class="ln" pathLength="1"' : ''} d="${ICON[k]}" fill="none" stroke="${color}" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+let pid = 0;
+const person = (c = '#9FB3C8', d = '#6F86A0') => { const id = 'pg' + pid++; return `<svg width="120" height="230" viewBox="0 0 120 230"><defs><radialGradient id="${id}h" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset=".45" stop-color="${c}"/><stop offset="1" stop-color="${d}"/></radialGradient><linearGradient id="${id}b" x1="0" x2="1"><stop offset="0" stop-color="${d}"/><stop offset=".35" stop-color="${c}"/><stop offset=".7" stop-color="${c}"/><stop offset="1" stop-color="${d}"/></linearGradient></defs><circle cx="60" cy="38" r="30" fill="url(#${id}h)"/><path d="M18 230 V120 Q18 78 60 78 Q102 78 102 120 V230 Z" fill="url(#${id}b)"/></svg>`; };
+const listSvg = (w = 170) => `<svg width="${w}" height="130" viewBox="0 0 ${w} 130"><rect width="${w}" height="130" rx="14" fill="#fff"/>${[0, 1, 2, 3, 4].map((i) => `<path d="M16 ${22 + i * 21}h${w - 46 - (i % 2) * 30}" stroke="${BLUE}" stroke-width="6" stroke-linecap="round"/>`).join('')}</svg>`;
+const CHECK = (id, color = GREEN, w = 12) => `<path id="${id}" class="ln" pathLength="1" stroke="${color}" stroke-width="${w}" d="M8 30 L24 46 L56 10"/>`;
+
+// ---------- scene shells ----------
+const defs = $('defs');
+function floorSvg(id, hz) {
+  defs.insertAdjacentHTML('beforeend', `<filter id="mb-${id}" x="-5%" y="-5%" width="110%" height="110%" color-interpolation-filters="sRGB"><feGaussianBlur id="mbk-${id}" stdDeviation="0 0"/></filter>`);
+  return `<svg class="floor" width="1080" height="1920" viewBox="0 0 1080 1920"><defs><linearGradient id="fg-${id}" gradientUnits="userSpaceOnUse" x1="0" y1="${hz}" x2="0" y2="${hz + 430}"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#fff"/></linearGradient>
+    <mask id="fm-${id}" maskUnits="userSpaceOnUse" x="0" y="0" width="1080" height="1920"><rect width="1080" height="1920" fill="url(#fg-${id})"/></mask></defs>
+    <path id="grid-${id}" mask="url(#fm-${id})" stroke="#ADADA6" stroke-width="2.4" stroke-dasharray="11 11" fill="none"/></svg>`;
+}
+const HZ = { intro: 990, nums: 930, d1: 990, d2: 1010, d3: 990, sum: 1000, rest: 1000, cta: 990 };
+const scene = (id, inner) => `<div class="scene${id === 'cta' ? ' dark' : ''}" id="${id}">${floorSvg(id, HZ[id])}<div class="cam" id="${id}-cam">${inner}</div></div>`;
+function floorPath(vx, hz, ph) {
+  const B = 2000; let d = '';
+  for (let i = -20; i <= 20; i++) d += `M${(540 + i * 170 - vx).toFixed(1)} ${B}L${(540 + i * 10 - vx * 0.06).toFixed(1)} ${hz}`;
+  const f = ((ph % 1) + 1) % 1;
+  for (let k = 0; k <= 13; k++) { const u = (k + f) / 13; if (u <= 1) d += `M-300 ${(hz + (B - hz) * u ** 1.9).toFixed(1)}H1380`; }
+  return d;
+}
+function camStep(id, fn, t) {
+  const c = fn(t), c2 = fn(t + 1 / 30);
+  $(id + '-cam').style.transform = `translate(540px,1080px) scale(${c.s.toFixed(4)}) translate(${(-c.cx).toFixed(2)}px,${(-c.cy).toFixed(2)}px)`;
+  $('grid-' + id).setAttribute('d', floorPath((c.cx - 540) * c.s, HZ[id], t * 0.12 + Math.log(c.s) * 2.5));
+  return { bx: Math.max(0, Math.abs(c2.cx - c.cx) * c.s * 0.4 - 6), by: Math.max(0, Math.abs(c2.cy - c.cy) * c.s * 0.4 - 6) }; // blur whips, keep slow pushes sharp
+}
+function sceneFx(id, o, bx = 0, by = 0) { // whole-scene move (cuts) + directional motion blur
+  const el = $(id);
+  el.style.transform = o ? `translate(${(o.x || 0).toFixed(1)}px,${(o.y || 0).toFixed(1)}px) scale(${(o.s ?? 1).toFixed(4)})` : '';
+  el.style.opacity = o && o.o !== undefined && o.o < 0.998 ? o.o.toFixed(3) : '';
+  if (Math.hypot(bx, by) < 0.6) { el.style.filter = ''; return; }
+  $('mbk-' + id).setAttribute('stdDeviation', `${Math.min(42, bx).toFixed(1)} ${Math.min(42, by).toFixed(1)}`);
+  el.style.filter = `url(#mb-${id})`;
+}
+function vis(id, on) { const el = $(id); el.style.visibility = on ? 'visible' : 'hidden'; return on; }
+
+// ---------- build: intro (S1–S4) ----------
+const rows = Array.from({ length: 14 }, (_, i) => `<div class="row" id="row${i}"><b style="width:${[200, 160, 180, 130, 190, 150][i % 6]}px"></b><i style="width:${[110, 90, 125][i % 3]}px"></i></div>`).join('');
+const boxGroup = (id, logo, label, extra) => `<div class="grp" id="${id}">
+  <div class="shadow" style="left:-178px;top:22px;width:356px;height:74px"></div>
+  <div class="sbox" style="left:-190px;top:-55px;width:380px">${SEARCH}<i class="caret" id="${id}-caret"></i><span>Ask anything</span></div>
+  <div class="ring" id="${id}-ring" style="left:-190px;top:-55px;width:380px"></div>
+  ${extra}
+  <div class="lshadow" id="${id}-ls" style="left:-64px;top:-74px;width:128px;height:36px"></div>
+  <div class="tile" id="${id}-logo" style="left:-80px;top:-285px;width:160px;height:160px;border-radius:40px">${logo}</div>
+  <div class="lbl" id="${id}-lbl" style="left:-230px;top:84px;width:460px">${label}</div></div>`;
+const listWrap = `<div class="clip" style="left:-175px;top:-760px;width:350px;height:560px"><div class="card" id="list" style="left:35px;top:10px;width:280px;height:500px"><div id="rows" class="abs" style="left:26px;top:28px">${rows}</div></div></div>`;
+const ansWrap = `<div class="clip" style="left:-185px;top:-560px;width:370px;height:360px"><div class="card" id="ans" style="left:35px;top:20px;width:300px;height:300px;border-radius:22px">
+  <svg width="300" height="300" viewBox="0 0 300 300"><g stroke="${INK}" stroke-width="13"><path id="al0" class="ln" pathLength="1" d="M36 64h196"/><path id="al1" class="ln" pathLength="1" d="M36 108h228"/><path id="al2" class="ln" pathLength="1" d="M36 152h160"/></g>
+</svg></div></div>`;
+let html = scene('intro', boxGroup('gb', gSvg(104), 'a list of links', listWrap) + boxGroup('cb', cSvg(104), 'an answer', ansWrap) +
+  `<div class="flash" id="flash" style="left:600px;top:1075px;width:960px"></div>`);
+
+// ---------- nums (S5) ----------
+const NUMX = [165, 445, 725], NUMY = [870, 920, 870];
+html += scene('nums', NUMX.map((x, i) => `<div class="cshadow" id="ns${i}" style="left:${x - 10}px;top:${NUMY[i] + 222}px;width:210px;height:56px"></div><div class="num" id="n${i}" style="left:${x}px;top:${NUMY[i]}px">${i + 1}</div>`).join(''));
+
+// ---------- d1: catalog vs librarian ----------
+const drawers = [];
+for (let r = 0; r < 4; r++) for (let c = 0; c < 2; c++) {
+  const x = 20 + c * 140, y = 22 + r * 98;
+  drawers.push(r === 1 && c === 1 ? `<rect x="${x}" y="${y}" width="120" height="80" rx="8" fill="#3a3a37"/>`
+    : `<rect x="${x}" y="${y}" width="120" height="80" rx="8" fill="#F4F4F1" stroke="${INK}" stroke-width="4"/><rect x="${x + 32}" y="${y + 14}" width="56" height="18" rx="3" fill="#fff" stroke="${INK}" stroke-width="3"/><circle cx="${x + 60}" cy="${y + 56}" r="7" fill="${INK}"/>`);
+}
+const drawerSvg = `<svg width="120" height="80" viewBox="0 0 120 80"><rect width="120" height="80" rx="8" fill="#F4F4F1" stroke="${INK}" stroke-width="4"/><rect x="32" y="14" width="56" height="18" rx="3" fill="#fff" stroke="${INK}" stroke-width="3"/><circle cx="60" cy="56" r="7" fill="${INK}"/></svg>`;
+const shelf = `<svg width="170" height="170" viewBox="0 0 170 170"><rect x="6" y="6" width="158" height="158" rx="10" fill="#fff" stroke="${INK}" stroke-width="5"/><path d="M6 86h158" stroke="${INK}" stroke-width="5"/>
+  ${[[20, 26, 18, '#C9923E'], [42, 34, 16, INK], [62, 22, 20, OR], [86, 30, 16, '#9FB3C8'], [106, 26, 22, INK], [132, 36, 16, '#C9923E']].map(([x, h, w, c]) => `<rect x="${x}" y="${82 - h - 12}" width="${w}" height="${h + 12}" rx="3" fill="${c}"/>`).join('')}
+  ${[[20, 30, 20, OR], [44, 22, 18, '#9FB3C8'], [66, 36, 16, INK], [86, 26, 22, '#C9923E'], [112, 32, 18, OR], [134, 24, 18, INK]].map(([x, h, w, c]) => `<rect x="${x}" y="${160 - h - 12}" width="${w}" height="${h + 12}" rx="3" fill="${c}"/>`).join('')}</svg>`;
+const book = `<svg width="391" height="242" viewBox="0 0 340 210"><path d="M170 34 C 120 12, 52 12, 14 26 V 190 C 52 176, 120 176, 170 198 Z" fill="#fff" stroke="${INK}" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M170 34 C 220 12, 288 12, 326 26 V 190 C 288 176, 220 176, 170 198 Z" fill="#fff" stroke="${INK}" stroke-width="5" stroke-linejoin="round"/>
+  <g stroke="${INK}" stroke-width="7">${[60, 90, 120, 150].map((y, i) => `<path id="bl${i}" class="ln" pathLength="1" d="M42 ${y}H${140 - (i % 2) * 22}"/>`).join('')}${[60, 90, 120, 150].map((y, i) => `<path id="br${i}" class="ln" pathLength="1" d="M200 ${y}H${298 - ((i + 1) % 2) * 26}"/>`).join('')}</g>
+  <rect id="scan" x="26" y="44" width="288" height="26" rx="6" fill="${GOLD}" opacity=".28"/></svg>`;
+const sbub = `<svg width="200" height="170" viewBox="0 0 200 170"><path d="M26 8h148a18 18 0 0 1 18 18v80a18 18 0 0 1-18 18H74l-38 34 6-34H26A18 18 0 0 1 8 106V26A18 18 0 0 1 26 8z" fill="#fff" stroke="${INK}" stroke-width="5" stroke-linejoin="round"/>
+  <g stroke="${INK}" stroke-width="9"><path id="sb0" class="ln" pathLength="1" d="M34 40h104"/><path id="sb1" class="ln" pathLength="1" d="M34 68h80"/></g></svg>`;
+html += scene('d1', `
+  <div class="cshadow" id="d1cs" style="left:380px;top:1112px;width:320px;height:64px"></div>
+  <div class="card" id="d1cab" style="left:390px;top:720px;width:300px;height:420px;border-radius:16px;transform-origin:50% 100%"><svg width="300" height="420" viewBox="0 0 300 420"><rect width="300" height="420" rx="16" fill="#fff"/>${drawers.join('')}</svg></div>
+  <div class="clip" style="left:498px;top:560px;width:240px;height:286px"><div class="card" id="d1idx" style="left:14px;top:292px;width:212px;height:160px;border-radius:16px;display:grid;place-items:center;text-align:center;font:800 50px/1.04 var(--sf);color:${INK}">Shelf<br>7 →</div></div>
+  <div id="d1dr" style="left:550px;top:842px;width:120px;height:80px;filter:drop-shadow(0 8px 0 #CFCFC8) drop-shadow(0 18px 18px rgba(0,0,0,.25))">${drawerSvg}</div>
+  <div class="tile" id="d1g" style="left:398px;top:604px;width:110px;height:110px;border-radius:28px">${gSvg(70)}</div>
+  <div class="cshadow" id="d1ss" style="left:760px;top:982px;width:200px;height:46px"></div>
+  <div id="d1shelf" style="left:775px;top:830px;transform-origin:50% 100%;filter:drop-shadow(0 8px 0 #DADAD4)">${shelf}</div>
+  <svg id="d1arrow" style="left:0;top:0" width="1080" height="1920" viewBox="0 0 1080 1920"><defs><mask id="d1am" maskUnits="userSpaceOnUse" x="0" y="0" width="1080" height="1920"><path id="d1amp" class="ln" pathLength="1" d="M736 700 C 778 688, 806 726, 826 800" stroke="#fff" stroke-width="30"/></mask></defs>
+    <g mask="url(#d1am)"><path d="M736 700 C 778 688, 806 726, 826 800" stroke="${GOLD}" stroke-width="8" stroke-dasharray="16 14" fill="none" stroke-linecap="round"/></g>
+    <path id="d1ah" d="M800 796 L826 808 L834 780" stroke="${GOLD}" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <div class="lbl" id="d1l1" style="left:290px;top:1210px;width:500px">shows where to look</div>
+  <div class="cshadow" id="d1ms" style="left:1525px;top:905px;width:190px;height:44px"></div>
+  <div class="tile" id="d1m" style="left:1530px;top:722px;width:180px;height:180px;border-radius:45px">${cSvg(116)}</div>
+  <div id="d1book" style="left:1425px;top:956px;transform-origin:50% 100%;filter:drop-shadow(0 10px 0 #DADAD4) drop-shadow(0 24px 24px rgba(0,0,0,.18))">${book}</div>
+  <div id="d1bub" style="left:1752px;top:590px;transform-origin:10% 100%;filter:drop-shadow(0 8px 0 #DADAD4)">${sbub}</div>
+  <div class="lbl" id="d1l2" style="left:1350px;top:1210px;width:500px">reads it for you</div>`);
+
+// ---------- d2: fresh facts vs thinking ----------
+const L2 = [['news', 'news', 90, 760], ['clock', 'opening hours', 290, 990], ['tag', 'prices', 110, 1220]];
+const R2 = [['pen', 'write', 590, 760], ['cal', 'plan', 770, 990], ['bulb', 'understand', 610, 1220]];
+html += scene('d2', `<div class="divider" id="d2div" style="left:538px;top:560px;height:900px"></div>
+  <div id="d2L" class="grp">
+    <div class="tile" id="d2g" style="left:205px;top:560px;width:130px;height:130px;border-radius:33px">${gSvg(84)}</div><div class="check" id="d2gc" style="left:306px;top:536px"><svg width="40" height="40" viewBox="0 0 64 56">${CHECK('d2gck', '#fff', 10)}</svg></div>
+    ${L2.map(([k, l, x, y]) => `<div class="tile2" id="t-${k}" style="left:${x}px;top:${y}px">${icon(k, INK)}<span>${l}</span></div>`).join('')}</div>
+  <div id="d2R" class="grp">
+    <div class="tile" id="d2c" style="left:745px;top:560px;width:130px;height:130px;border-radius:33px">${cSvg(84)}</div><div class="check" id="d2cc" style="left:846px;top:536px"><svg width="40" height="40" viewBox="0 0 64 56">${CHECK('d2cck', '#fff', 10)}</svg></div>
+    ${R2.map(([k, l, x, y]) => `<div class="tile2" id="t-${k}" style="left:${x}px;top:${y}px">${icon(k, OR, 'ic-' + k, true)}<span>${l}</span></div>`).join('')}</div>`);
+
+// ---------- d3: same list vs made for you ----------
+const PX = [300, 540, 780], PROT = [-6, 3, -2];
+html += scene('d3', `<div class="grp" id="d3top"><div class="tile" id="d3g" style="left:485px;top:585px;width:110px;height:110px;border-radius:28px">${gSvg(70)}</div>
+  ${PX.map((x, i) => `<div class="cshadow" id="d3ps${i}" style="left:${x - 90}px;top:1196px;width:180px;height:44px"></div><div id="d3p${i}" style="left:${x - 60}px;top:990px;transform-origin:50% 100%">${person()}</div>`).join('')}
+  ${PX.map((x, i) => `<div id="d3l${i}" style="left:${x - 85}px;top:820px;filter:drop-shadow(0 8px 0 #DADAD4) drop-shadow(0 20px 22px rgba(0,0,0,.18))">${listSvg()}</div>`).join('')}
+  <div id="d3mst" style="left:455px;top:770px;filter:drop-shadow(0 8px 0 #DADAD4) drop-shadow(0 20px 22px rgba(0,0,0,.18))">${listSvg()}</div>
+  <div class="lbl" id="d3lbl" style="left:240px;top:1262px;width:600px">same list for everyone</div></div>
+  <div id="d3gin" style="left:1244px;top:574px;filter:drop-shadow(0 8px 0 #DADAD4) drop-shadow(0 18px 20px rgba(0,0,0,.16))"><svg width="210" height="132" viewBox="0 0 210 132"><rect width="210" height="132" rx="16" fill="#fff"/><g transform="translate(16 16) scale(1.5)">${A.G}</g>${[0, 1, 2].map((i) => `<path d="M70 ${30 + i * 34}h${110 - (i % 2) * 26}" stroke="${BLUE}" stroke-width="8" stroke-linecap="round"/>`).join('')}</svg></div>
+  <div class="tile" id="d3c" style="left:1565px;top:585px;width:110px;height:110px;border-radius:28px">${cSvg(70)}</div>
+  <div class="bubble" id="d3b" style="left:auto;right:-860px;top:740px;transform-origin:100% 100%"><span id="d3txt"></span><i class="cr" id="d3cr"></i></div>
+  <div id="d3you" style="left:1962px;top:716px;transform-origin:50% 100%"><svg width="66" height="126" viewBox="0 0 120 230"><circle cx="60" cy="38" r="30" fill="${OR}"/><path d="M18 230 V120 Q18 78 60 78 Q102 78 102 120 V230 Z" fill="${OR}"/></svg></div>
+  <div class="card reply" id="d3r" style="left:1230px;top:1000px;width:780px;transform-origin:50% 0">
+    <div class="rh">${cSvg(40)}<span>Claude</span><i id="d3dots"><b></b><b></b><b></b></i></div>
+    ${['for my dad, 60', 'loves fishing', 'under €50'].map((s, i) => `<div class="rr" id="rr${i}"><svg width="50" height="46" viewBox="0 0 64 56">${CHECK('rc' + i, GREEN, 11)}</svg><span>${s}</span></div>`).join('')}
+    <div class="res" id="d3res">🎁 Engraved tackle box</div></div>`);
+
+// ---------- sum + delete? no. ----------
+html += scene('sum', `<div class="cshadow" id="sgs" style="left:195px;top:1112px;width:210px;height:54px"></div><div class="cshadow" id="scs" style="left:675px;top:1112px;width:210px;height:54px"></div>
+  <div class="tile" id="sg" style="left:190px;top:900px;width:220px;height:220px;border-radius:54px">${gSvg(140)}</div>
+  <div class="vig" id="svig"></div>
+  <div class="tile" id="sc" style="left:670px;top:900px;width:220px;height:220px;border-radius:54px">${cSvg(140)}</div>
+  <div class="xbadge" id="sx" style="left:166px;top:876px"><svg width="34" height="34" viewBox="0 0 34 34"><path d="M7 7l20 20M27 7L7 27" stroke="#fff" stroke-width="6" stroke-linecap="round"/></svg></div>
+`);
+
+// ---------- restaurant ----------
+const mapSvg = `<svg width="760" height="560" viewBox="0 0 760 560"><rect width="760" height="560" rx="30" fill="#ECEEE7"/>
+  <path d="M0 330 C 200 300, 420 380, 760 318 L760 398 C 420 458, 200 380, 0 410 Z" fill="#AAD3F5"/>
+  <rect x="566" y="44" width="150" height="132" rx="16" fill="#CDEBC5"/><rect x="40" y="440" width="110" height="80" rx="14" fill="#CDEBC5"/>
+  <g stroke="#fff" stroke-linecap="round" fill="none"><path d="M40 210H720M180 40V520M500 40V300M40 480H720M360 300V520" stroke-width="28"/><path d="M40 112H470M620 210V300M260 300V470" stroke-width="12"/></g>
+  <path id="route" class="ln" pathLength="1" d="M180 430 V210 H500" stroke="${BLUE}" stroke-width="20"/>
+  <circle cx="180" cy="430" r="19" fill="${BLUE}" stroke="#fff" stroke-width="7"/><circle id="pinpt" cx="500" cy="210" r="2" fill="none"/></svg>`;
+const pin = `<svg width="120" height="160" viewBox="0 0 120 160"><path d="M60 156 C 52 128, 10 96, 10 56 A50 50 0 0 1 110 56 C 110 96, 68 128, 60 156 Z" fill="#EA4335"/><circle cx="60" cy="56" r="30" fill="#fff"/>
+  <path d="M50 38v16a6 6 0 0 0 12 0V38M56 38v38M72 38c-6 6-6 18 0 22v16" stroke="#EA4335" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+html += scene('rest', `<div id="map" style="left:160px;top:760px;width:760px;height:560px"><div style="transform:perspective(1100px) rotateX(36deg);transform-origin:50% 60%;filter:drop-shadow(0 12px 0 #D8D8D0) drop-shadow(0 30px 40px rgba(0,0,0,.18))">${mapSvg}</div></div>
+  <div class="tile" id="rg" style="left:0;top:0;width:130px;height:130px;border-radius:33px;transform-origin:0 0">${gSvg(84)}</div>
+  <div class="cshadow" id="rps" style="left:0;top:0;width:110px;height:34px"></div>
+  <div id="rpin" style="left:0;top:0;transform-origin:50% 100%">${pin}</div>
+  <div class="card menu" id="menu" style="left:545px;top:730px;width:380px;height:540px;transform-origin:50% 50%">
+    <div class="mt">MENU</div><div class="dish">Tomato soup</div><div class="dish">Grilled fish</div><div class="dish">Pasta</div><div class="dish" style="border:0">Tiramisu</div>
+    <svg class="abs" style="left:0;top:0" width="380" height="540" viewBox="0 0 380 540"><rect id="hlr" class="ln" pathLength="1" x="22" y="218" width="336" height="76" rx="18" stroke="${GREEN}" stroke-width="6"/><g transform="translate(296 236) scale(.62)">${CHECK('hlc', GREEN, 13)}</g></svg>
+    <div class="tile" id="rc" style="position:absolute;left:-48px;top:-56px;width:116px;height:116px;border-radius:30px">${cSvg(74)}</div></div>`);
+
+// ---------- CTA: proof + comment (Ciko picked option B) ----------
+html += scene('cta', `<div class="leak" id="leak"></div><div class="vig2"></div><div class="term" id="ctaCard" style="left:120px;top:440px;width:840px;transform-origin:50% 50%">
+    <div class="tbar"><i style="background:#FF5F57"></i><i style="background:#FEBC2E"></i><i style="background:#28C840"></i><span>claude</span></div>
+    <div class="thead">${mascot(12)}<div><b>Claude Code</b><small>~/videos/google-vs-claude</small></div></div>
+    <div class="tline"><span class="pr">&gt;</span> <span id="tptxt"></span><i class="tcr" id="tcr"></i></div>
+    ${['script', 'voice · ElevenLabs', 'animation', 'music'].map((x, i) => `<div class="tcheck" id="tc${i}"><span class="ok">✓</span> ${x}</div>`).join('')}</div>
+  <div class="cpill" id="cpill" style="left:140px;top:1000px;width:800px;height:114px"><div class="cav"><svg width="40" height="44" viewBox="0 0 120 130"><circle cx="60" cy="36" r="30" fill="#A9A59D"/><path d="M14 130 Q14 76 60 76 Q106 76 106 130 Z" fill="#A9A59D"/></svg></div>
+    <span class="cin"><span id="cph">Add a comment…</span><b id="ctxt"></b><i class="ccr" id="ccr"></i></span><span class="cpost" id="cpost">Post</span></div>
+  <div class="abs" id="rip" style="left:0;top:0;width:160px;height:160px;border-radius:50%;background:rgba(0,149,246,.18);border:4px solid rgba(0,149,246,.45)"></div>
+  <div class="pdf" id="pdf" style="left:360px;top:470px;width:360px;height:460px"><small>THE PROMPT · PDF</small><p>This is Google.<br>This is <span>Claude.</span></p><i class="free">FREE · 3 pages</i><b class="shine" id="shine"></b></div>
+  <div class="disc abs" id="disc" style="top:1160px"><span>Not affiliated with Google or Anthropic.</span></div>`);
+$('scenes').innerHTML = html;
+
+// ---------- supers (screen space, key words only) ----------
+const P = (w, t, k = 'rise', c = '') => ({ w, t, k, c });
+const SUP = [
+  { id: 's1', t0: -1, t1: T.and, exit: 'whipL', lines: [[P('This', -1), P('is', -1), P(wm(88) + '.', T.google1, 'pop')]] },
+  { id: 's2', t0: T.and, t1: T.almost, enter: 'whipR', lines: [[P('And', T.and), P('this', T.and), P('is', T.and), P('Claude.', T.claude1, 'pop', 'o')]] },
+  { id: 's3', t0: T.almost, t1: T.so, lines: [[P('Almost', T.almost), P('the', W[8][1])], [P('same', T.same, 'pop', 'g'), P('box.', W[10][1], 'pop', 'g')]] },
+  { id: 's4', t0: T.so, t1: T.three, exit: 'cut', lines: [[P('So', T.so), P('why…', W[12][1])]] },
+  { id: 's5', t0: T.three, t1: T.d1, lines: [[P('3', T.three, 'slam', 'g'), P('differences.', T.diffs)]] },
+  { id: 's6', t0: T.d1, t1: T.d2, ph: 'ph6', lines: [[P('', -1, 'ph'), P('Catalog', W[34][1])], [P('vs', T.librarian - 0.1), P('librarian', T.librarian, 'pop', 'o')]] },
+  { id: 's7', t0: T.d2, t1: T.d3, ph: 'ph7', lines: [[P('', -1, 'ph'), P('Fresh', T.fresh), P('facts', T.fresh + 0.14)], [P('vs', T.writing - 0.1), P('thinking', T.writing, 'pop', 'o')]] },
+  { id: 's8', t0: T.d3, t1: T.sum, exit: 'cut', ph: 'ph8', lines: [[P('', -1, 'ph'), P('Same', T.same3), P('list', T.list3)], [P('vs', T.details - 0.1), P('made', T.details, 'pop', 'o'), P('for', T.details + 0.07, 'pop', 'o'), P('you', T.details + 0.14, 'pop', 'o')]] },
+  { id: 's9', t0: T.sum, t1: T.so2, uline: true, lines: [[P(wm(88), T.sum, 'pop'), P('finds.', T.finds)], [P('Claude', T.claude4, 'pop', 'o'), P('explains.', T.explains2)]] },
+  { id: 's9b', t0: T.so2, t1: T.del, exit: 'cut', lines: [[P('So…', T.so2)]] },
+  { id: 's10', t0: T.del, t1: T.no, exit: 'cut', lines: [[P('Delete', T.del), P(wm(88) + '?', T.delG, 'pop')]] },
+  { id: 's11', t0: T.no, t1: T.rest, cls: 'huge', lines: [[P('No.', T.no, 'slam')]] },
+  { id: 's12', t0: T.where2, t1: T.claude5, cls: 'mid', lines: [[P('Where', T.where2), P('to', T.where2 + 0.08), P('eat?', T.where2 + 0.16), P(wm(80) + '.', T.restaurant, 'pop')]] },
+  { id: 's13', t0: T.claude5, t1: T.cta, exit: 'cut', cls: 'mid', lines: [[P('What', T.what - 0.12), P('to', T.what + 0.05), P('order?', W[111][1]), P('Claude.', W[111][1] + 0.3, 'pop', 'o')]] },
+  { id: 's14', t0: T.cta + 0.14, t1: W[114][1], cls: 'big light', lines: [[P('Still', T.cta + 0.14, 'slam'), P('watching?', W[113][1], 'slam')]] },
+  { id: 's15', t0: W[114][1], t1: T.noAE, cls: 'light', lines: [[P('Made', W[114][1]), P('with', W[114][1] + 0.1), P('Claude.', T.claude7, 'pop', 'o')]] },
+  { id: 's16', t0: T.noAE, t1: T.comment, cls: 'light', strike: true, lines: [[P('No', T.noAE), P('After', W[122][1]), P('Effects.', W[123][1])]] },
+  { id: 's17', t0: T.comment, t1: DUR + 1, cls: 'light', lines: [[P('Comment', T.comment), P('CLAUDE', T.claudeWord, 'pop', 'g')]] },
+];
+$('supers').innerHTML = SUP.map((S) => `<div class="super ${S.cls || ''}" id="${S.id}">${S.lines.map((ln, li) => `<div class="ln">${ln.map((p, wi) =>
+  p.k === 'ph' ? `<span class="ph" id="${S.ph}"></span>` : `<span class="w ${p.c}" id="${S.id}-${li}-${wi}">${p.w}</span>`).join('')}</div>`).join('')}${S.uline ? `<div class="uline" id="${S.id}-ul"></div>` : ''}${S.strike ? `<div class="strike" id="${S.id}-st"></div>` : ''}</div>`).join('') + '<div id="badge"><span id="badgeN">1</span></div>';
+$('over').innerHTML = `<div class="num" id="fly">1</div><div class="num" id="bigN">2</div>`;
+// measure once (no transforms applied yet)
+const rectIn = (el, root = $('frame')) => { const a = el.getBoundingClientRect(), b = root.getBoundingClientRect(); return { x: a.left - b.left, y: a.top - b.top, w: a.width, h: a.height }; };
+for (const S of SUP) $(S.id).style.visibility = 'hidden';
+const PH = {}; for (const k of ['ph6', 'ph7', 'ph8']) { const r = rectIn($(k)); PH[k] = { x: r.x + r.w / 2 - 14 - 46, y: r.y + r.h / 2 - 46 - 4 }; }
+// badge centre sits on the text line: use the line box
+for (const k of ['ph6', 'ph7', 'ph8']) { const ln = $(k).parentElement, r = rectIn(ln); PH[k].y = r.y + r.h / 2 - 46 - 2; }
+{ const sp = $('s9-1-1'), r = rectIn(sp), ul = $('s9-ul'), root = rectIn($('s9')); ul.style.left = `${r.x - root.x + 8}px`; ul.style.top = `${r.y - root.y + r.h - 4}px`; ul.style.width = `${r.w - 16}px`; }
+const N0 = rectIn($('n0')), BIGW = $('bigN').offsetWidth;
+{ const a = rectIn($('s16-0-1')), b = rectIn($('s16-0-2')), root = rectIn($('s16')), st = $('s16-st'); st.style.left = `${a.x - root.x - 8}px`; st.style.top = `${a.y - root.y + a.h * 0.52}px`; st.style.width = `${b.x + b.w - a.x + 16}px`; }
+const POST = (() => { const r = rectIn($('cpost')); return { x: r.x + r.w / 2, y: r.y + r.h / 2 }; })();
+const PINPT = rectIn($('pinpt'));
+const MAPG = { x: 150, y: 830 };
+
+// ---------- cameras (world → screen) ----------
+const introCam = (t) => {
+  const pan = eio(prog(t, T.and, 0.3)), pb = eio(prog(t, T.almost, 0.45));
+  if (t < T.almost) return { cx: mix(540, 1620, pan), cy: mix(1010, 1080, eio(prog(t, 0, 0.75))), s: 1.32 + 0.5 * (1 - eio(prog(t, 0, 0.75))) + 0.08 * prog(t, 0, T.and) + 0.05 * prog(t, T.and, T.almost - T.and) };
+  return { cx: mix(1620, 1080, pb), cy: 1080, s: mix(1.45, 1.0, pb) + 0.035 * prog(t, T.almost + 0.45, T.three - T.almost - 0.45) };
+};
+const numsCam = (t) => { const z = ei(prog(t, T.d1 - 0.4, 0.4)); return { cx: mix(540, 262, z), cy: mix(1080, 1060, z), s: 1.0 + 0.06 * eo(prog(t, T.three, 0.9)) + 0.55 * z }; };
+const d1Cam = (t) => { const pu = eio(prog(t, T.where - 0.05, 0.5)) * (1 - eio(prog(t, T.d1c, 0.32))), w = eio(prog(t, T.d1c, 0.32));
+  return { cx: mix(mix(540, 620, pu), 1620, w), cy: mix(1080, 985, pu), s: 1.15 + 0.08 * prog(t, T.d1, T.d2 - T.d1) + 0.15 * pu }; };
+const d2Cam = (t) => {
+  let fx = mix(0, -25, eio(prog(t, T.fresh, 0.5)));
+  if (t >= T.writing) fx = mix(-25, 25, eio(prog(t, T.writing, 0.45)));
+  if (t >= T.claude2) fx = mix(25, 0, eio(prog(t, T.claude2, 0.5)));
+  return { cx: 540 + fx, cy: 1080, s: 1.03 + 0.06 * prog(t, T.d2, T.d3 - T.d2) };
+};
+const d3Cam = (t) => { const pb = eio(prog(t, T.sum, 0.6)); return { cx: mix(540, 1620, eio(prog(t, T.claude3, 0.36))), cy: mix(1080, 1120, pb), s: mix(1.0 + 0.04 * prog(t, T.d3, T.sum - T.d3), 1.08, pb) + 0.02 * prog(t, T.sum + 0.6, 1.6) }; };
+const sumCam = (t) => {
+  const p = eio(prog(t, T.so2, T.del - T.so2 + 0.25)), punch = t > T.no ? 0.05 * Math.exp(-(t - T.no) * 5) : 0;
+  return { cx: mix(540, 300, p), cy: mix(1080, 1040, p), s: mix(1.0 + 0.03 * prog(t, T.sum, T.so2 - T.sum), 1.3, p) + 0.04 * prog(t, T.del, T.rest - T.del) + punch };
+};
+const restCam = (t) => { const q = eio(prog(t, T.what + 0.1, T.cta - T.what - 0.1)); return { cx: mix(540, 640, q), cy: mix(1080, 1010, q), s: 1.0 + 0.06 * prog(t, T.rest, T.cta - T.rest) + 0.1 * q }; };
+const ctaCam = (t) => ({ cx: 540, cy: 1080, s: 1.0 + 0.04 * prog(t, T.cta, DUR - T.cta) });
+const toScreen = (c, x, y) => ({ x: 540 + (x - c.cx) * c.s, y: 1080 + (y - c.cy) * c.s });
+
+// ---------- seek ----------
+function seekIntro(t) {
+  if (!vis('intro', t < T.three)) return;
+  const b = camStep('intro', introCam, t);
+  sceneFx('intro', null, b.bx, b.by);
+  const pb = eio(prog(t, T.almost, 0.45)), bump = (t0) => 1 + wobble(t - t0, 0.06);
+  put($('gb'), { x: mix(540, 830, pb), y: 1150, s: bump(T.same) });
+  put($('cb'), { x: mix(1620, 1330, pb), y: 1150, s: bump(T.same + 0.05) });
+  const fl = (ph) => -10 * Math.sin(t * 2.4 + ph);
+  put($('gb-logo'), { y: fl(0) });
+  shadowFor($('gb-ls'), (10 + fl(0)) / 90);
+  const d = drop(t, T.claude1 + 0.02, 230, 0.18), cf = fl(1.3) * prog(t, T.claude1 + 0.25, 0.5);
+  put($('cb-logo'), { y: d.y + cf, sx: d.sx, sy: d.sy, o: d.o });
+  shadowFor($('cb-ls'), Math.min(1, -(d.y + cf) / 230), d.o);
+  const blink = Math.floor(t * 2.2) % 2 ? 0 : 1;
+  $('gb-caret').style.opacity = blink; $('cb-caret').style.opacity = blink;
+  $('gb-ring').style.opacity = pulse(t, T.one, 0.32).toFixed(3); $('cb-ring').style.opacity = pulse(t, T.other, 0.32).toFixed(3);
+  $('flash').style.opacity = (t < T.same ? 0 : clamp((t - T.same) / 0.06) * (1 - prog(t, T.so - 0.3, 0.3)) * (0.85 + 0.15 * Math.cos((t - T.same) * 9))).toFixed(3);
+  // list of links unrolls out of Google, rows tick in, then it keeps scrolling
+  const lr = spring(t - T.list, 13, 18);
+  put($('list'), { y: 600 * (1 - lr), o: t > T.list ? 1 : 0 });
+  T.rows.forEach((tr, i) => { const p = eo(prog(t, tr, 0.12)); const r = $('row' + i); r.style.opacity = p.toFixed(3); r.firstChild.style.transform = `scaleX(${p.toFixed(3)})`; });
+  for (let i = 10; i < 14; i++) $('row' + i).style.opacity = '1';
+  $('rows').style.transform = `translateY(${(-Math.max(0, t - T.rows[9] - 0.15) * 75).toFixed(1)}px)`;
+  popIn($('gb-lbl'), t, T.links);
+  // one answer rises out of Claude
+  const ar = spring(t - T.answerCard, 13, 18);
+  put($('ans'), { y: 360 * (1 - ar), o: t > T.answerCard ? 1 : 0 });
+  [0, 1, 2].forEach((i) => draw($('al' + i), eo(prog(t, T.answer + i * 0.05, 0.16))));
+  popIn($('cb-lbl'), t, T.answer);
+}
+function seekNums(t) {
+  if (!vis('nums', t >= T.three && t < T.d1)) return;
+  camStep('nums', numsCam, t);
+  T.nums.forEach((tn, i) => { const k = eo(prog(t, tn, 0.12)), land = t > tn + 0.12 ? Math.exp(-(t - tn - 0.12) * 13) * Math.cos((t - tn - 0.12) * 30) : 0, bob = t > tn + 0.4 ? -12 * Math.sin((t - tn - 0.4) * 6 + i * 1.3) * prog(t, tn + 0.4, 0.2) : 0, gone = i ? eo(prog(t, T.d1 - 0.32, 0.22)) : 0;
+    put($('n' + i), { y: bob + 60 * gone, r: 3 * Math.sin((t - tn) * 2.6 + i * 2) * prog(t, tn + 0.3, 0.3), s: mix(1.55, 1, k), sx: 1 + 0.1 * land, sy: 1 - 0.14 * land, o: clamp((t - tn) / 0.05) * (1 - gone) }); shadowFor($('ns' + i), Math.max(1 - k, -bob / 200), clamp((t - tn) / 0.05) * (1 - gone)); });
+}
+function seekFly(t) {
+  const el = $('fly');
+  if (t < T.d1 || t >= T.d1 + 0.3) { el.style.visibility = 'hidden'; return; }
+  const c = numsCam(T.d1), a = toScreen(c, N0.x, N0.y), p = eio(prog(t, T.d1, 0.28)), k = mix(c.s, 62 / 300, p);
+  const bx = PH.ph6.x + 46 - (N0.w * 62 / 300) / 2, by = PH.ph6.y + 46 - 31 - 2;
+  el.style.visibility = 'visible';
+  el.style.transform = `translate(${mix(a.x, bx, p).toFixed(1)}px,${mix(a.y, by, p).toFixed(1)}px) scale(${k.toFixed(4)})`;
+}
+const BIG = [[T.d2, '2', 'ph7'], [T.d3, '3', 'ph8']];
+function seekBig(t) {
+  const el = $('bigN'), hit = BIG.find(([tf]) => t >= tf && t < tf + 0.62);
+  if (!hit) { el.style.visibility = 'hidden'; return; }
+  const [tf, d, ph] = hit, sl = eo(prog(t, tf, 0.13)), fly = eio(prog(t, tf + 0.38, 0.24));
+  let k = mix(1.55, 1, sl) * 0.62 + wobble(t - tf - 0.13, 0.02), cx = 540, cy = 1000;
+  k = mix(k, 62 / 560, fly); cx = mix(cx, PH[ph].x + 46, fly); cy = mix(cy, PH[ph].y + 46 - 2, fly);
+  if (el.textContent !== d) el.textContent = d;
+  el.style.visibility = 'visible'; el.style.opacity = clamp((t - tf) / 0.05).toFixed(3);
+  el.style.transform = `translate(${(cx - BIGW * k / 2).toFixed(1)}px,${(cy - 280 * k).toFixed(1)}px) scale(${k.toFixed(4)})`;
+}
+function seekBadge(t) {
+  const el = $('badge');
+  if (t < T.d1 + 0.27 || t >= T.sum) { el.style.visibility = 'hidden'; return; }
+  if (BIG.some(([tf]) => t >= tf && t < tf + 0.6)) { el.style.visibility = 'hidden'; return; }
+  const ph = t >= T.d3 ? 'ph8' : t >= T.d2 ? 'ph7' : 'ph6', n = t >= T.d3 ? '3' : t >= T.d2 ? '2' : '1', t0 = t >= T.d3 ? T.d3 + 0.6 : t >= T.d2 ? T.d2 + 0.6 : T.d1 + 0.27;
+  if ($('badgeN').textContent !== n) $('badgeN').textContent = n;
+  el.style.visibility = 'visible';
+  el.style.transform = `translate(${PH[ph].x.toFixed(1)}px,${PH[ph].y.toFixed(1)}px) scale(${(1 + wobble(t - t0, 0.12)).toFixed(4)})`;
+}
+function seekD1(t) {
+  if (!vis('d1', t >= T.d1 && t < T.d2 + 0.34)) return;
+  const b = camStep('d1', d1Cam, t), out = eio(prog(t, T.d2, 0.32)), v = eio(prog(t + 1 / 30, T.d2, 0.32)) - out;
+  sceneFx('d1', { y: -1920 * out }, b.bx, b.by + v * 1920 * 0.4);
+  popIn($('d1g'), t, T.d1 + 0.3);
+  const cab = spring(t - T.d1g, 14, 20);
+  put($('d1cab'), { sy: cab, o: popO(t, T.d1g) });
+  put($('d1cs'), { s: clamp(cab), o: clamp(cab) });
+  const dr = eo(prog(t, T.where, 0.22));
+  put($('d1dr'), { y: 20 * dr, s: 1 + 0.16 * dr, o: t >= T.d1g + 0.12 ? 1 : 0 });
+  put($('d1idx'), { y: -222 * spring(t - T.where - 0.06, 13, 18) });
+  popIn($('d1shelf'), t, T.look - 0.06); put($('d1ss'), { o: popO(t, T.look - 0.06) });
+  draw($('d1amp'), eo(prog(t, T.look, 0.36)));
+  $('d1ah').style.opacity = t > T.look + 0.32 ? '1' : '0';
+  popIn($('d1l1'), t, T.shows);
+  const m = drop(t, T.d1c + 0.3, 140, 0.16), bob = t > T.d1c + 0.6 ? -8 * Math.sin((t - T.d1c - 0.6) * 3.2) : 0;
+  put($('d1m'), { y: m.y + bob, sx: m.sx, sy: m.sy, o: m.o, r: t > T.reads ? -4 * Math.sin((t - T.reads) * 2.4) * prog(t, T.reads, 0.3) : 0 }); shadowFor($('d1ms'), Math.min(1, -(m.y + bob) / 140), m.o);
+  put($('d1book'), { s: spring(t - T.librarian - 0.35), y: 30 * (1 - eo(prog(t, T.librarian + 0.35, 0.25))), o: popO(t, T.librarian + 0.35) });
+  [0, 1, 2, 3].forEach((i) => { draw($('bl' + i), eo(prog(t, T.reads + 0.12 + i * 0.09, 0.14))); draw($('br' + i), eo(prog(t, T.foryou + i * 0.09, 0.14))); });
+  const sc = $('scan'); sc.setAttribute('y', (44 + 104 * ((t - T.reads) * 1.6 % 1)).toFixed(1)); sc.style.opacity = t > T.reads + 0.1 && t < T.explains1 + 0.2 ? '' : '0';
+  popIn($('d1bub'), t, T.explains1 - 0.04);
+  [0, 1].forEach((i) => draw($('sb' + i), eo(prog(t, T.explains1 + 0.06 + i * 0.07, 0.14))));
+  popIn($('d1l2'), t, T.reads + 0.05);
+}
+function seekD2(t) {
+  if (!vis('d2', t >= T.d2 && t < T.d3 + 0.24)) return;
+  const b = camStep('d2', d2Cam, t);
+  const inn = eio(prog(t, T.d2, 0.32)), v = eio(prog(t + 1 / 30, T.d2, 0.32)) - inn;
+  const zo = ei(prog(t, T.d3, 0.22));
+  sceneFx('d2', { y: 1920 * (1 - inn), s: 1 + 1.6 * zo, o: 1 - clamp((t - T.d3) / 0.1) }, b.bx, b.by + v * 1920 * 0.4);
+  put($('d2div'), { sy: eo(prog(t, T.d2 + 0.25, 0.4)) });
+  const focusR = t >= T.writing && t < T.claude2 + 0.4 ? eo(prog(t, T.writing, 0.3)) * (1 - eo(prog(t, T.claude2 + 0.4, 0.4))) : 0;
+  const focusL = t >= T.d2 + 0.3 && t < T.writing ? 1 : 0;
+  $('d2L').style.opacity = (1 - 0.6 * focusR).toFixed(3);
+  put($('d2g'), { s: 1 + wobble(t - T.google2, 0.12), o: popO(t, T.d2 + 0.3) });
+  put($('d2c'), { s: 1 + wobble(t - T.claude2, 0.12) + 0.1 * wobble(t - T.writing, 1), o: popO(t, T.d2 + 0.3) * (t < T.writing ? 0.4 : 1) });
+  popIn($('d2gc'), t, T.google2); draw($('d2gck'), eo(prog(t, T.google2 + 0.05, 0.18)));
+  popIn($('d2cc'), t, T.claude2); draw($('d2cck'), eo(prog(t, T.claude2 + 0.05, 0.18)));
+  [[W[56][1], 'news'], [T.hours, 'clock'], [T.prices, 'tag']].forEach(([tt, k], i) => {
+    const p = spring(tt === undefined ? 0 : t - tt + 0.02, 12, 16);
+    put($('t-' + k), { x: -520 * (1 - p), r: -14 * (1 - p), o: t > tt - 0.04 ? 1 : 0, s: 1 + wobble(t - T.google2 - i * 0.04, 0.08) });
+  });
+  [[T.writing, 'pen'], [T.planning, 'cal'], [T.understanding, 'bulb']].forEach(([tt, k], i) => {
+    const lit = t >= tt, el = $('t-' + k); el.classList.toggle('ghost', !lit);
+    put(el, { s: (lit ? spring(t - tt) : 0.92 + 0.02 * Math.sin(t * 3 + i)) * (1 + wobble(t - T.claude2 - i * 0.04, 0.08)), o: lit ? 1 : 0.9 * popO(t, T.fresh + i * 0.08) });
+    draw($('ic-' + k), eo(prog(t, tt + 0.04, 0.42)));
+  });
+  $('ic-bulb').style.fill = t > T.understanding + 0.35 ? `rgba(242,196,92,${(0.55 * prog(t, T.understanding + 0.35, 0.2)).toFixed(3)})` : 'none';
+}
+function seekD3(t) {
+  if (!vis('d3', t >= T.d3 && t < T.so2)) return;
+  popIn($('d3gin'), t, T.sum);
+  const b = camStep('d3', d3Cam, t), zi = eo(prog(t, T.d3, 0.3));
+  sceneFx('d3', { s: mix(0.82, 1, zi) }, b.bx, b.by);
+  popIn($('d3g'), t, T.d3 + 0.12);
+  const mp = spring(t - T.google3, 14, 20), split = t >= T.same3 + 0.08;
+  put($('d3mst'), { y: 120 * mp - 120, s: mix(0.3, 1, clamp(mp)), o: t > T.google3 && !split ? 1 : 0 });
+  PX.forEach((x, i) => {
+    const tp = T.everyone + i * 0.1, p = spring(t - tp, 14, 20);
+    put($('d3p' + i), { sy: p, o: popO(t, tp) }); put($('d3ps' + i), { s: clamp(p), o: clamp(p) });
+    const tl = T.same3 + 0.08 + i * 0.09, q = eio(prog(t, tl, 0.3));
+    put($('d3l' + i), { x: (540 - x) * (1 - q), y: (-70) * (1 - q) - 50 * Math.sin(q * Math.PI), r: PROT[i] * q, o: t >= T.same3 + 0.08 ? 1 : 0 });
+  });
+  popIn($('d3lbl'), t, T.same3);
+  popIn($('d3c'), t, T.claude3 + 0.16);
+  // details type in as he says them
+  let txt = '';
+  for (const [s, a, e] of T.typed) { if (t >= a) txt += s.slice(0, Math.ceil(s.length * clamp((t - a) / (e - a)))); }
+  const tb = $('d3txt'); if (tb.textContent !== txt) tb.textContent = txt;
+  put($('d3b'), { s: spring(t - (T.claude3 + 0.3)), o: popO(t, T.claude3 + 0.3) });
+  $('d3cr').style.opacity = t < T.send && Math.floor(t * 3) % 2 === 0 ? '1' : t < T.typed[0][1] ? '1' : '0';
+  popIn($('d3you'), t, W[77][1] - 0.05);
+  const rIn = T.details + 0.05, rowT = [T.typed[1][2] - 0.05, T.typed[2][2] - 0.05, T.typed[3][2] - 0.2];
+  put($('d3r'), { y: 50 * (1 - eo(prog(t, rIn, 0.22))), s: mix(0.94, 1, spring(t - rIn)), o: popO(t, rIn) });
+  [0, 1, 2].forEach((i) => { put($('rr' + i), { o: clamp((t - rowT[i]) / 0.12), x: 16 * (1 - eo(prog(t, rowT[i], 0.2))) }); draw($('rc' + i), eo(prog(t, rowT[i] + 0.05, 0.16))); });
+  [...$('d3dots').children].forEach((b, i) => { b.style.opacity = t < T.made ? (0.35 + 0.65 * Math.max(0, Math.sin((t * 7) - i * 0.9))).toFixed(2) : '0'; });
+  put($('d3res'), { s: spring(t - T.made) * (1 + wobble(t - T.made - 0.3, 0.05)), o: popO(t, T.made) });
+}
+function seekSum(t) {
+  if (!vis('sum', t >= T.so2 && t < T.rest + 0.45)) return;
+  camStep('sum', sumCam, t);
+  const g = { y: 0, sx: 1, sy: 1, o: 1, h: 0 }, c = g;
+  const jig = t >= T.del && t < T.no ? 3.2 * Math.sin((t - T.del) * 40) : wobble(t - T.no, 3, 8, 30);
+  put($('sg'), { y: g.y, sx: g.sx, sy: g.sy, o: g.o, r: jig });
+  const aside = eio(prog(t, T.so2, 0.45));
+  put($('sc'), { x: 360 * aside, y: c.y, sx: c.sx, sy: c.sy, o: c.o * (1 - aside) });
+  put($('svig'), { o: clamp((t - T.so2) / 0.5) * (1 - clamp((t - T.no) / 0.25)) });
+  shadowFor($('sgs'), g.h, g.o); put($('scs'), { x: 360 * aside, o: 1 - aside });
+  const away = ei(prog(t, T.so2, 0.2));
+  const xs = t < T.no ? spring(t - T.del - 0.04) : 1 - eo(prog(t, T.no, 0.12));
+  put($('sx'), { s: xs, o: t > T.del ? 1 : 0, r: jig });
+}
+function seekRest(t) {
+  if (!vis('rest', t >= T.rest && t < T.cta + 0.14)) return;
+  camStep('rest', restCam, t);
+  const sc = sumCam(T.rest), gp = toScreen(sc, 300, 1010), r = 2300 * eio(prog(t, T.rest, 0.42));
+  $('rest').style.clipPath = t < T.rest + 0.42 ? `circle(${r.toFixed(1)}px at ${gp.x.toFixed(1)}px ${gp.y.toFixed(1)}px)` : '';
+  const back = eo(prog(t, T.claude5, 0.4));
+  const mx = -170 * back, my = -10 * back, ms = mix(1, 0.84, back), onMap = (x, y) => ({ x: 540 + (x - 540) * ms + mx, y: 1040 + (y - 1040) * ms + my });
+  put($('map'), { x: mx, y: my, s: ms, o: 1 - 0.3 * back });
+  // the Google tile flies out of the iris and parks on the map's corner
+  const fp = eio(prog(t, T.rest, 0.45)), gk = mix(220 * sc.s / 130, 1, fp);
+  const mg = onMap(MAPG.x, MAPG.y);
+  put($('rg'), { x: mix(gp.x - 130 * gk / 2, mg.x, fp), y: mix(gp.y - 130 * gk / 2, mg.y, fp), s: gk * ms });
+  draw($('route'), eo(prog(t, T.where2, Math.max(0.2, T.restaurant - T.where2 + 0.1))));
+  const pd = drop(t, T.restaurant + 0.18, 380, 0.18), pp = onMap(PINPT.x, PINPT.y), px = pp.x - 60, py = pp.y - 156;
+  put($('rpin'), { x: px, y: py + pd.y, sx: pd.sx, sy: pd.sy, o: pd.o * (1 - 0.3 * back) });
+  put($('rps'), { x: px + 5, y: py + 140, s: 1 - 0.55 * pd.h, o: pd.o * (1 - 0.8 * pd.h) * (1 - 0.3 * back) });
+  // menu slides in over the map, then flips into the CTA card on "Monday"
+  const mi = spring(t - T.claude5, 12, 16), fl = ei(prog(t, T.cta, 0.14));
+  put($('menu'), { x: 700 * (1 - mi) - 195 * fl, y: 60 * fl, r: 4 * (1 - fl), o: t > T.claude5 - 0.02 ? 1 : 0, pre: 'perspective(1400px) ', post: ` rotateY(${(90 * fl).toFixed(2)}deg)` });
+  draw($('hlr'), eo(prog(t, T.pick, 0.3)));
+  draw($('hlc'), eo(prog(t, T.what, 0.22)));
+}
+function seekCta(t) {
+  if (!vis('cta', t >= T.cta + 0.14)) return;
+  camStep('cta', ctaCam, t);
+  put($('leak'), { x: 130 * Math.sin(t * 0.5), y: 24 * Math.sin(t * 0.37), o: 0.82 + 0.18 * Math.sin(t * 0.9) });
+  const f = eo(prog(t, T.cta + 0.14, 0.22)), away = eio(prog(t, T.pdf - 0.05, 0.4));
+  put($('ctaCard'), { pre: 'perspective(1400px) ', post: ` rotateY(${(-90 * (1 - f)).toFixed(2)}deg)`, s: (1 + wobble(t - T.cta - 0.36, 0.025)) * mix(1, 0.9, away), y: -30 * away, o: 1 - away });
+  // the prompt types itself, then Claude ticks off the jobs
+  const pt = 'make a reel: Google vs Claude', [a, b] = T.promptType, n = Math.round(pt.length * clamp((t - a) / (b - a))), ptx = pt.slice(0, n);
+  if ($('tptxt').textContent !== ptx) $('tptxt').textContent = ptx;
+  $('tcr').style.opacity = n < pt.length || Math.floor(t * 2.4) % 2 === 0 ? '1' : '0';
+  T.checks.forEach((tc, i) => put($('tc' + i), { o: clamp((t - tc) / 0.1), x: 14 * (1 - eo(prog(t, tc, 0.2))) }));
+  // CLAUDE types into the comment box, Post
+  popIn($('cpill'), t, T.comment - 0.1);
+  const cw = 'CLAUDE', cn = Math.round(cw.length * clamp((t - T.claudeWord) / 0.35)), ctx = cw.slice(0, cn);
+  if ($('ctxt').textContent !== ctx) $('ctxt').textContent = ctx;
+  $('cph').style.display = cn ? 'none' : '';
+  $('ccr').style.opacity = t < T.post && Math.floor(t * 3) % 2 === 0 ? '1' : '0';
+  $('cpost').style.color = cn ? '#0095F6' : '#B8D9F5';
+  put($('cpost'), { s: t > T.post && t < T.post + 0.25 ? 1 - 0.12 * Math.sin(((t - T.post) / 0.25) * Math.PI) : 1 });
+  const rp = prog(t, T.post, 0.45);
+  put($('rip'), { x: POST.x - 80, y: POST.y - 80, s: 0.2 + 1.1 * eo(rp), o: t > T.post && rp < 1 ? 0.9 * (1 - rp) : 0 });
+  // ...and the prompt PDF lands
+  const pa = eo(prog(t, T.pdf, 0.36)), pf = spring(t - T.pdf, 12, 18);
+  const sh = [1.0, 2.1].reduce((m, k) => Math.max(m, prog(t, T.pdf + k, 0.7) * (t < T.pdf + k + 0.7 ? 1 : 0)), 0);
+  $('shine').style.transform = `translateX(${(-200 + 560 * eio(sh)).toFixed(1)}%) rotate(18deg)`; $('shine').style.opacity = sh > 0 ? '1' : '0';
+  put($('pdf'), { x: 720 * (1 - pa), y: -60 * (1 - pa), r: mix(14, -4, pa), s: mix(0.55, 1, pf) * (1 + 0.012 * Math.sin((t - T.pdf) * 2.2) * prog(t, T.pdf + 0.6, 0.4)), o: popO(t, T.pdf) });
+  put($('disc'), { o: clamp((t - T.cta - 0.6) / 0.3) });
+}
+function seekSupers(t) {
+  for (const S of SUP) {
+    const el = $(S.id), tEnd = S.exit === 'whipL' ? S.t1 + 0.3 : S.t1;
+    if (t < S.t0 || t >= tEnd) { el.style.visibility = 'hidden'; continue; }
+    el.style.visibility = 'visible';
+    const exitP = S.exit === 'cut' || S.exit === 'whipL' ? 0 : ei(prog(t, S.t1 - 0.14, 0.14));
+    const wx = S.exit === 'whipL' ? -1500 * eio(prog(t, S.t1, 0.3)) : S.enter === 'whipR' ? 1500 * (1 - eio(prog(t, S.t0, 0.3))) : 0;
+    S.lines.forEach((ln, li) => ln.forEach((p, wi) => {
+      if (p.k === 'ph') return;
+      const w = $(`${S.id}-${li}-${wi}`), tt = t - p.t;
+      if (tt < 0) { w.style.visibility = 'hidden'; return; }
+      let o = {};
+      if (p.k === 'pop') o = { s: spring(tt), o: clamp(tt / 0.05) };
+      else if (p.k === 'slam') o = { s: mix(1.7, 1, eo5(prog(tt, 0, 0.18))) + wobble(tt - 0.18, 0.03), o: clamp(tt / 0.05) };
+      else { const q = eo(prog(tt, 0, 0.24)); o = { y: 34 * (1 - q), o: clamp(tt / 0.12), blur: 8 * (1 - q) }; }
+      if (S.enter === 'whipR' && p.t <= S.t0 + 0.01) o = { o: 1 };
+      o.x = (o.x || 0) + wx; o.y = (o.y || 0) - 40 * exitP; o.o = (o.o ?? 1) * (1 - exitP);
+      put(w, o);
+    }));
+    if (S.strike) { const st = $(S.id + '-st'), q = eo(prog(t, T.strike, 0.22)); st.style.transform = `scaleX(${q.toFixed(3)}) rotate(-3deg)`; st.style.opacity = ((q > 0 ? 1 : 0) * (1 - exitP)).toFixed(3); }
+    if (S.uline) { const ul = $(S.id + '-ul'), q = eo(prog(t, T.explains2 + 0.05, 0.32)); ul.style.transform = `scaleX(${q.toFixed(3)})`; ul.style.opacity = ((q > 0 ? 1 : 0) * (1 - exitP)).toFixed(3); }
+  }
+}
+function seek(t) {
+  seekIntro(t); seekNums(t); seekD1(t); seekD2(t); seekD3(t); seekSum(t); seekRest(t); seekCta(t);
+  seekSupers(t); seekFly(t); seekBig(t); seekBadge(t);
+}
+window.seek = seek; window.DUR = DUR;
+const q = new URLSearchParams(location.search);
+if (q.get('safe')) $('safe').style.display = 'block';
+seek(parseFloat(q.get('t') || '0'));
+})();
+</script></body></html>

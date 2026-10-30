@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>One day with my AI agent</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,600&family=Inter:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+/* 1080 × 1920, every frame = seek(t). Text stays inside x 120–960, y 200–1480. */
+:root{--gold:#C9923E;--ink:#0D0B09}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:1080px;height:1920px;overflow:hidden;background:var(--ink);color:#fff;font-family:Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.a{position:absolute}
+.ic{width:1em;height:1em;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.metal{background:linear-gradient(180deg,#FBE7BC 0%,#E3B566 42%,#B98235 62%,#F0CF8E 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.serif{font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:600}
+
+/* the 4 a.m. lamp: warm black, a slow gold light at the top, dark corners */
+#leak{inset:0;background:radial-gradient(ellipse 620px 520px at var(--x,50%) -60px,rgba(232,170,80,.30),rgba(201,146,62,.10) 45%,transparent 72%)}
+#glow{left:280px;top:525px;width:800px;height:900px;background:radial-gradient(closest-side,rgba(201,146,62,.13),transparent)}
+#vig{inset:0;background:radial-gradient(ellipse 760px 1100px at 50% 46%,transparent 55%,rgba(0,0,0,.62) 100%)}
+
+/* hook */
+#hook{left:0;right:0;top:700px;text-align:center}
+#hook b{display:block;font:900 168px/1 Inter;letter-spacing:-.05em}
+#hook i{display:block;margin-top:8px;font-size:132px;line-height:1;color:var(--gold)}
+
+/* clock: 5 slots that roll like a split-flap board */
+#clock{left:0;right:0;top:200px;display:flex;justify-content:center;gap:12px}
+.slot{position:relative;width:108px;height:156px;overflow:hidden;border-radius:16px;background:linear-gradient(#1A1612,#120F0C);box-shadow:inset 0 0 0 1.5px rgba(201,146,62,.28),0 18px 40px rgba(0,0,0,.45)}
+.slot::after{content:"";position:absolute;left:0;right:0;top:50%;height:2px;background:rgba(0,0,0,.55)}
+.slot.c{width:40px;background:none;box-shadow:none}.slot.c::after{display:none}
+.slot span{position:absolute;inset:0;display:grid;place-items:center;font:900 136px/1 Inter;letter-spacing:-.04em}
+#job{left:0;right:0;top:372px;height:72px}
+#job span{position:absolute;left:0;right:0;text-align:center;font-size:62px;line-height:1}
+
+/* phone with a Telegram chat: real proportions (1 : 2), thin frame, side buttons, status bar, home bar. The screen is drawn at 571 × 1190 and scaled to fit */
+#phone{left:432px;top:470px;width:496px;height:1010px;border-radius:78px;background:linear-gradient(145deg,#3A342C,#14120F 32%,#0B0A08 68%,#2A251F);
+  box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.14),0 0 0 1.5px rgba(201,146,62,.25),0 60px 120px rgba(0,0,0,.65),0 0 140px rgba(201,146,62,.12)}
+#phone::before{content:"";position:absolute;right:-5px;top:290px;width:6px;height:150px;border-radius:0 5px 5px 0;background:#2E2924}
+#phone::after{content:"";position:absolute;left:-5px;top:190px;width:6px;height:56px;border-radius:5px 0 0 5px;background:#2E2924;box-shadow:0 96px 0 #2E2924,0 196px 0 #2E2924}
+.scr{position:absolute;left:11px;top:11px;width:571px;height:1190px;transform:scale(.83);transform-origin:0 0;border-radius:80px;overflow:hidden;background:#0E1621}
+.isl{position:absolute;left:50%;top:16px;width:150px;height:44px;margin-left:-75px;border-radius:22px;background:#000;z-index:7}
+.sb{position:absolute;left:0;right:0;top:0;height:76px;padding:4px 46px 0 62px;display:flex;align-items:center;justify-content:space-between;font:700 28px/1 Inter;z-index:6}
+.sb svg{height:22px;fill:#fff}
+.home{position:absolute;left:50%;bottom:12px;width:180px;height:7px;margin-left:-90px;border-radius:4px;background:rgba(255,255,255,.6);z-index:5}
+.hd{position:absolute;left:0;right:0;top:0;height:150px;padding:66px 30px 0;display:flex;align-items:center;gap:16px;background:#17212B;z-index:4}
+.av{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;background:var(--gold);color:#0A0A0A;font-size:36px}
+.av .ic{stroke-width:2.2}
+.nm{flex:1;font:700 30px/1.15 Inter}.nm small{position:relative;display:block;height:28px;font:500 23px/28px Inter;color:#6AB2F2}
+.nm small>i{position:absolute;left:0;top:0;font-style:normal;white-space:nowrap}
+.hd .tg{width:44px;height:44px}
+.chat{position:absolute;left:0;right:0;top:150px;bottom:120px;overflow:hidden;-webkit-mask-image:linear-gradient(transparent 0,#000 44px);mask-image:linear-gradient(transparent 0,#000 44px)}
+.feed{position:absolute;left:0;right:0;top:0;padding:26px 22px;display:flex;flex-direction:column;gap:16px}
+.sc{display:flex;flex-direction:column;gap:16px}
+.day{align-self:center;margin:14px 0 2px;padding:8px 18px;border-radius:18px;background:rgba(255,255,255,.08);font:700 24px/1 Inter;color:#C9D4DD}
+.in,.out{max-width:90%;padding:20px 24px;border-radius:28px;font:500 33px/1.3 Inter}
+.in{align-self:flex-start;background:#182533;border-bottom-left-radius:8px}
+.out{align-self:flex-end;background:#2B5278;border-bottom-right-radius:8px;font-weight:600}
+.in b{font-weight:700}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.btn{position:relative;display:flex;align-items:center;justify-content:center;gap:8px;height:72px;padding:0 10px;border-radius:18px;background:rgba(255,255,255,.08);font:600 29px/1 Inter;color:#E8EEF3;white-space:nowrap}
+.btn.g{background:var(--gold);color:#0A0A0A;font-weight:800}
+.btn .ic{font-size:26px;stroke-width:2.4}
+.ring{position:absolute;inset:-6px;border-radius:20px;box-shadow:0 0 0 3px #F3D49A,0 0 26px rgba(243,212,154,.8)}
+.card{width:88%;border-radius:26px;padding:20px 22px;position:relative}
+.dash{position:absolute;inset:0;border-radius:26px;border:2.5px dashed rgba(201,146,62,.7)}
+.fill{position:absolute;inset:0;border-radius:26px;background:#182533}
+.ch{position:relative;display:flex;align-items:center;gap:12px;font:800 32px/1 Inter}
+.tag{margin-left:auto;padding:7px 11px;border-radius:9px;background:var(--gold);color:#0A0A0A;font:900 19px/1 Inter;letter-spacing:.08em}
+.row{position:relative;display:flex;align-items:center;gap:14px;margin-top:18px;font:800 25px/1 Inter;letter-spacing:.1em;color:#6AB2F2}
+.row b{width:84px}.row span{font:600 29px/1.2 Inter;letter-spacing:0;color:#E8EEF3}
+.post{position:relative;margin-top:20px;padding:4px 0 4px 16px;border-left:4px solid var(--gold);font:600 31px/1.3 Inter;color:#F4E6CC}
+.cli{position:relative;align-self:flex-start;max-width:94%;padding:20px 24px;border-radius:24px;border:2.5px dashed rgba(201,146,62,.65);background:rgba(201,146,62,.08);font:500 32px/1.3 Inter;color:#F1DDB8}
+.cli p{display:flex;gap:10px;align-items:center;font:700 24px/1 Inter;letter-spacing:.06em;color:var(--gold);margin-bottom:10px}
+.dots{display:inline-flex;gap:7px;margin-left:8px;vertical-align:middle}
+.dots i{width:10px;height:10px;border-radius:50%;background:#6AB2F2}
+.done{position:absolute;right:16px;top:-18px;display:inline-flex;align-items:center;gap:8px;padding:7px 13px;border-radius:10px;background:rgba(201,146,62,.18);color:#F3D49A;font:800 25px/1 Inter;vertical-align:middle}
+.done .ic{font-size:24px;stroke-width:2.4}
+.strike{position:relative}
+.strike::after{content:"";position:absolute;left:0;top:55%;height:3px;width:calc(var(--s,0) * 100%);background:#E8EEF3}
+.bars{margin-top:10px}
+.bar{display:flex;align-items:center;gap:14px;margin-top:16px;font:600 27px/1 Inter;color:#C9D4DD}
+.bar span{width:290px}
+.bar b{font:800 29px/1 Inter;letter-spacing:.12em;color:#F3D49A}
+.wave{display:flex;align-items:center;gap:7px;height:90px;margin-top:12px}
+.wave i{width:9px;border-radius:5px;background:var(--gold)}
+.call{align-self:flex-start;width:88%;padding:20px 22px;border-radius:26px;background:linear-gradient(135deg,#1F2F3E,#182533);box-shadow:inset 0 0 0 2px rgba(201,146,62,.45)}
+.call p{display:flex;align-items:center;gap:12px;font:800 30px/1 Inter}
+.live{width:14px;height:14px;border-radius:50%;background:#FF5A4F}
+.ipt{position:absolute;left:18px;right:18px;bottom:36px;height:70px;border-radius:35px;background:#17212B;display:flex;align-items:center;gap:14px;padding:0 24px;font:500 27px/1 Inter;color:#6D7F8F;z-index:4}
+.ipt .sl{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;background:rgba(255,255,255,.08);color:#9FB3C4;font:700 28px/1 Inter}
+.ipt span{flex:1}.ipt .ic{font-size:34px;color:#6AB2F2}
+#menu{left:18px;right:18px;bottom:118px;border-radius:24px;background:#1E2C3A;padding:10px;z-index:4;box-shadow:0 20px 50px rgba(0,0,0,.5)}
+.mi{display:flex;align-items:center;gap:16px;height:80px;padding:0 18px;border-radius:16px;font:700 32px/1 Inter;color:#fff}
+.mi small{font:500 26px/1 Inter;color:#8A9BAA}
+.mi.dim{opacity:.4}
+#touch{width:72px;height:72px;margin:-36px 0 0 -36px;border-radius:50%;border:4px solid rgba(255,255,255,.95);background:rgba(255,255,255,.18);box-shadow:0 0 30px rgba(255,255,255,.35);z-index:6}
+#rip{width:72px;height:72px;margin:-36px 0 0 -36px;border-radius:50%;border:3px solid #F3D49A;z-index:6}
+
+/* the production line, top to bottom, next to the phone */
+#flow{left:0;top:0;width:1080px;height:1920px;pointer-events:none}
+.ln{position:absolute;left:188px;width:6px;border-radius:3px;background:rgba(255,255,255,.12)}
+.ln i{display:block;width:100%;height:0;border-radius:3px;background:linear-gradient(#B98235,#F3D49A);box-shadow:0 0 14px rgba(243,212,154,.6)}
+.nd{position:absolute;left:153px;width:76px;height:76px;margin-top:-38px;border-radius:50%;display:grid;place-items:center;background:#15120E;box-shadow:inset 0 0 0 2.5px rgba(255,255,255,.18);font-size:32px;color:rgba(255,255,255,.45)}
+.nd .ic{stroke-width:2}
+.nd svg.tgl{width:40px;height:40px}
+.lab{position:absolute;left:247px;width:170px;height:30px;margin-top:-15px;font:700 28px/30px Inter;color:rgba(255,255,255,.55)}
+.lab span{position:absolute;left:0;top:0;white-space:nowrap}
+#dot{left:191px;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;background:#FFF1CF;box-shadow:0 0 18px 6px rgba(243,212,154,.75)}
+
+/* end card */
+.ji{position:absolute;top:800px;width:132px;margin-left:-66px;text-align:center}
+.ji span{display:grid;place-items:center;width:112px;height:112px;margin:0 auto;border-radius:50%;background:#15120E;box-shadow:inset 0 0 0 2.5px var(--gold),0 0 30px rgba(201,146,62,.25);font-size:50px;color:#F3D49A}
+.ji b{display:block;margin-top:16px;font:700 30px/1 Inter;color:#E9E2D6}
+#jobs5{left:0;right:0;top:470px;text-align:center;font:900 168px/1 Inter;letter-spacing:-.05em}
+#bub{left:540px;top:930px;width:250px;height:210px;margin:-105px 0 0 -125px}
+#chat1{left:0;right:0;top:1080px;text-align:center;font-size:178px;line-height:1;color:var(--gold)}
+#credit{left:0;right:0;top:1300px;display:flex;justify-content:center;align-items:center;gap:16px;font:600 36px/1 Inter;color:#D9D2C5}
+#credit .tgl{width:38px;height:38px}
+#safe{inset:0;display:none;z-index:99;pointer-events:none}
+#safe i{position:absolute;background:rgba(255,0,0,.55)}
+</style></head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="i-bot" viewBox="0 0 24 24"><rect x="5" y="8" width="14" height="11" rx="3"/><path d="M12 8V4.5M9.5 13h.01M14.5 13h.01M3 13v2M21 13v2"/></symbol>
+  <symbol id="i-ok" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.2"/><path d="M8.2 12.3l2.6 2.6 5-5.2"/></symbol>
+  <symbol id="i-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M14.6 9.2c-.5-.9-1.5-1.4-2.6-1.4-1.6 0-2.7.9-2.7 2.1 0 2.9 5.6 1.4 5.6 4.3 0 1.2-1.2 2.1-2.9 2.1-1.2 0-2.2-.5-2.7-1.4M12 6.3v1.5M12 16.4v1.4"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></symbol>
+  <symbol id="i-cards" viewBox="0 0 24 24"><rect x="3.5" y="7" width="13.5" height="13" rx="2"/><path d="M7.5 3.5h11a2 2 0 0 1 2 2V16"/><path d="M7 13.4l2.2 2.2 4.2-4.4"/></symbol>
+  <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 2"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="M4 12 20 4l-4 16-4-6z"/><path d="M12 14l8-10"/></symbol>
+  <symbol id="l-tg" viewBox="0 0 24 24"><path fill="#26A5E4" d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4.5 20.5c.9-3.9 3.9-6 7.5-6s6.6 2.1 7.5 6"/></symbol>
+  <symbol id="i-euro" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M15.4 8.8a4.2 4.2 0 1 0 0 6.4M7.6 11h5.6M7.6 13.4h5.6"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><path d="M6.6 3.5h3l1.5 4-2 1.3a11 11 0 0 0 5.1 5.1l1.3-2 4 1.5v3a2 2 0 0 1-2.2 2A16.5 16.5 0 0 1 4.6 5.7a2 2 0 0 1 2-2.2z"/></symbol>
+</defs></svg>
+
+<div id="leak" class="a"></div><div id="glow" class="a"></div>
+
+<div id="hook" class="a"><b>One day</b><i class="serif">with my AI agent.</i></div>
+
+<div id="clock" class="a"></div>
+<div id="job" class="a"></div>
+
+<div id="phone" class="a"><div class="scr">
+  <div class="isl"></div>
+  <div class="sb"><b id="sbt">7:00</b><svg viewBox="0 0 92 22" aria-hidden="true"><rect x="0" y="14" width="5" height="8" rx="1.5"/><rect x="8" y="10" width="5" height="12" rx="1.5"/><rect x="16" y="6" width="5" height="16" rx="1.5"/><rect x="24" y="2" width="5" height="20" rx="1.5"/><path d="M47 21.5l-4.2-4.8a6.2 6.2 0 0 1 8.4 0zM38.6 12.2a12.2 12.2 0 0 1 16.8 0l-2.4 2.7a8.6 8.6 0 0 0-12 0zM34.4 7.4a18.4 18.4 0 0 1 25.2 0l-2.3 2.6a14.8 14.8 0 0 0-20.6 0z"/><rect x="64" y="3" width="24" height="16" rx="4.5" fill="none" stroke="#fff" stroke-opacity=".5" stroke-width="1.8"/><rect x="67" y="6" width="17" height="10" rx="2.2"/><rect x="89.5" y="8.5" width="2.5" height="5" rx="1.2" opacity=".5"/></svg></div>
+  <div class="hd"><span class="av"><svg class="ic"><use href="#i-bot"/></svg></span><p class="nm">My AI agent<small><i id="on">online</i><i id="typ">typing<span class="dots"><i></i><i></i><i></i></span></i></small></p><svg class="tg"><use href="#l-tg"/></svg></div>
+  <div class="chat" id="chat"></div>
+  <div class="ipt"><span class="sl">/</span><span>Message</span><svg class="ic"><use href="#i-mic"/></svg></div>
+  <div id="menu" class="a"><p class="mi" id="m-money"><span>/money</span><small>money this week</small></p><p class="mi dim"><span>/news</span><small>Claude news</small></p></div>
+  <div class="home"></div>
+</div></div>
+<div id="touch" class="a"></div><div id="rip" class="a"></div>
+
+<div id="flow" class="a"></div>
+
+<div id="end" class="a" style="inset:0">
+  <div id="jobs5" class="a">5 jobs.</div>
+  <svg id="bub" class="a" viewBox="0 0 250 210" aria-hidden="true"><defs><linearGradient id="gb" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FBE7BC"/><stop offset=".5" stop-color="#D9A553"/><stop offset="1" stop-color="#A8732D"/></linearGradient></defs>
+    <path d="M40 12h170a28 28 0 0 1 28 28v92a28 28 0 0 1-28 28H112l-52 40 8-40H40a28 28 0 0 1-28-28V40a28 28 0 0 1 28-28z" fill="rgba(201,146,62,.12)" stroke="url(#gb)" stroke-width="7" stroke-linejoin="round"/>
+    <use href="#l-tg" x="89" y="50" width="72" height="72"/></svg>
+  <div id="chat1" class="a serif">1 app.</div>
+  <div id="credit" class="a"><span>My AI agent · built with Claude</span><span id="cmas"></span></div>
+</div>
+
+<div id="safe" class="a"><i style="left:0;right:0;top:0;height:200px;opacity:.35"></i><i style="left:0;right:0;top:1480px;bottom:0;opacity:.35"></i><i style="left:0;width:120px;top:200px;height:1280px;opacity:.35"></i><i style="right:0;width:120px;top:200px;height:1280px;opacity:.35"></i></div>
+
+<script src="timing.js"></script>
+<script>
+const { BAR, B, END, DUR, N, TAP, CLAUDE, MSG } = TIMING;
+window.DUR = DUR;
+const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const P = (t, a, d) => clamp((t - a) / d);                                   // progress of a move that starts at a and lasts d
+const out3 = (x) => 1 - (1 - x) ** 3, outX = (x) => (x >= 1 ? 1 : 1 - 2 ** (-10 * x)), in3 = (x) => x ** 3;
+const inOut = (x) => (x < .5 ? 4 * x ** 3 : 1 - (-2 * x + 2) ** 3 / 2);
+const back = (x) => (x <= 0 ? 0 : x >= 1 ? 1 : 1 + 2.4 * (x - 1) ** 3 + 1.4 * (x - 1) ** 2);
+const st = (el, o, tr = 'none', f = 'none') => { el.style.opacity = o; el.style.transform = tr; el.style.filter = f; };
+const ico = (id, cls = 'ic') => `<svg class="${cls}"><use href="#${id}"/></svg>`;
+if (location.search.includes('safe')) $('#safe').style.display = 'block';
+
+// Claude = the pixel mascot (same glyphs as the site)
+const M = [' ▐▛███▛█', '▝▜██████▀', '  ▝▝ ▝▝'], Q = { '█': '1111', '▐': '0101', '▛': '1110', '▜': '1101', '▝': '0100', '▀': '1100', ' ': '0000' };
+function mascot(c) { let r = ''; M.forEach((row, y) => [...row].forEach((ch, x) => [...Q[ch]].forEach((on, n) => { if (on === '1') r += `<rect x="${x * c + (n % 2) * c / 2}" y="${y * 2 * c + (n >> 1) * c}" width="${c / 2 + .5}" height="${c + .5}"/>`; })));
+  return `<svg width="${9 * c}" height="${6 * c}" viewBox="0 0 ${9 * c} ${6 * c}" aria-hidden="true"><g fill="#D97757">${r}</g></svg>`; }
+$('#cmas').innerHTML = mascot(6);
+
+const HOURS = [['07:00', 'Claude news', 'i-clock', '07:00'], ['09:00', 'Reminders', 'i-clock', '09:00'], ['12:00', 'Client changes', 'i-user', 'Client'],
+  ['18:00', 'Money', 'i-user', 'You'], ['21:00', 'German practice', 'i-clock', '21:00']];
+const TYPING = [[.3, 1.1], [.05, .45], [1.0, 2.6], [1.5, 2.9], [1.75, 2.9]]; // header says "typing…" while the agent works
+
+// ---- chat scenes, one per hour; [data-k] items arrive at MSG[h][k]
+const SCENES = [
+  `<div class="card" data-k="0"><span class="dash"></span><span class="fill" data-f></span>
+     <div data-k="1"><p class="ch">${mascot(4)}Claude news<span class="tag">BIG</span></p>
+       <p class="row"><b>WHAT</b><span>What's new in Claude</span></p><p class="row"><b>WHO</b><span>Who it helps</span></p></div>
+     <p class="post" data-k="2">My post idea, ready to film.</p></div>`,
+  `<div class="in" data-k="0" style="max-width:92%;position:relative"><p style="display:flex;align-items:center;gap:12px">${ico('i-clock')}<b class="strike" id="inv">Send the invoice</b><span class="done" id="dn">${ico('i-ok')}Done</span></p>
+     <div class="btns" id="kb"><span class="btn g" id="b-done">${ico('i-ok')}DONE<i class="ring" data-k="1"></i></span><span class="btn">+1h</span><span class="btn">Tonight 21:30</span><span class="btn">Tomorrow 4am</span></div></div>`,
+  `<div class="cli" data-k="0"><p>${ico('i-cards')}NEW CLIENT MESSAGE</p>“Please make the logo bigger.”</div>
+   <div class="in" data-k="1"><p style="display:flex;align-items:center;gap:12px">${mascot(3.4)}<span>Card made. Claude is writing the fix<span class="dots" id="fxd"><i></i><i></i><i></i></span></span></p></div>
+   <div class="in" data-k="2" style="min-width:66%"><b>Fix ready.</b><div class="btns" style="grid-template-columns:1fr"><span class="btn g" id="b-live"><span id="pl">Push live</span><span id="lv" style="position:absolute;display:flex;align-items:center;gap:8px">${ico('i-ok')}Live</span></span></div></div>`,
+  `<div class="out" data-k="1">/money</div>
+   <div class="card" data-k="2" style="width:92%"><span class="dash"></span><span class="fill" data-f></span>
+     <div data-k="3" style="position:relative"><p class="ch">${ico('i-euro')}This week</p>
+       <div class="bars"><p class="bar"><span>Money in</span><b>€ ••••</b></p><p class="bar"><span>Money out</span><b>€ ••••</b></p><p class="bar"><span>New subscriptions</span><b>••</b></p></div></div></div>`,
+  `<div class="in" data-k="0"><p style="display:flex;align-items:center;gap:12px">${ico('i-mic')}<b>German practice</b></p><p style="margin-top:8px;color:#C9D4DD">~7 min. Tap, allow the mic, just talk.</p>
+     <div class="btns" style="grid-template-columns:1fr;min-width:400px"><span class="btn g" id="b-call">${ico('i-phone')}Start call</span></div></div>
+   <div class="call" data-k="1"><p><span class="live" id="lvdot"></span><span id="ct">Live call</span></p><div class="wave" id="wave">${'<i></i>'.repeat(30)}</div></div>
+   <div class="in" data-k="2"><b>Claude checked your call.</b><br>Mistakes and new words saved.</div>`,
+];
+$('#chat').innerHTML = `<div class="feed" id="feed">${SCENES.map((h, i) => `<div class="sc" id="sc${i}"><p class="day">${HOURS[i][0]}</p>${h}</div>`).join('')}</div>`;
+
+// ---- clock slots
+$('#clock').innerHTML = [0, 1, 2, 3, 4].map((j) => `<div class="slot${j === 2 ? ' c' : ''}"><span class="metal"></span><span class="metal"></span></div>`).join('');
+const slots = $$('#clock .slot');
+$('#job').innerHTML = HOURS.map(([, j]) => `<span class="serif">${j}</span>`).join('');
+
+// ---- flow: trigger → Telegram → AI agent → Claude → Done
+const NY = [600, 790, 980, 1170, 1360], KEYS = ['trig', 'tg', 'agent', 'claude', 'done']; // stations, top to bottom, left of the phone
+$('#flow').innerHTML = NY.slice(0, 4).map((y, i) => `<div class="ln" style="top:${y + 38}px;height:${NY[i + 1] - y - 76}px"><i></i></div>`).join('') +
+  `<div class="nd" style="top:${NY[0]}px"><span id="trg"></span></div><div class="nd" style="top:${NY[1]}px"><svg class="tgl"><use href="#l-tg"/></svg></div>` +
+  `<div class="nd" style="top:${NY[2]}px">${ico('i-bot')}</div><div class="nd" style="top:${NY[3]}px">${mascot(4.2)}</div><div class="nd" style="top:${NY[4]}px">${ico('i-ok')}</div>` +
+  `<div class="lab" style="top:${NY[0]}px">${HOURS.map((h) => `<span>${h[3]}</span>`).join('')}<span>Trigger</span></div>` +
+  ['Telegram', 'AI agent', 'Claude', 'Done'].map((l, i) => `<div class="lab" style="top:${NY[i + 1]}px"><span>${l}</span></div>`).join('') + `<div id="dot" class="a"></div>`;
+const nodes = $$('#flow .nd'), lines = $$('#flow .ln i'), labs = $$('#flow .lab'), trigLabs = $$('span', labs[0]);
+
+// ---- end card: the five jobs
+const JOBS = [['i-spark', 'News'], ['i-clock', 'Reminders'], ['i-cards', 'Clients'], ['i-euro', 'Money'], ['i-mic', 'German']];
+$('#end').insertAdjacentHTML('beforeend', JOBS.map(([i, l], k) => `<div class="ji" style="left:${180 + k * 180}px"><span>${ico(i)}</span><b>${l}</b></div>`).join(''));
+const jis = $$('#end .ji');
+
+function hourAt(t) { let h = -1; B.forEach((b, i) => { if (t >= b) h = i; }); return t >= END ? -2 : h; }
+
+window.seek = function (t) {
+  const h = hourAt(t), b = h >= 0 ? B[h] : 0, u = t - b, tEnd = t - END;
+  // light at the top drifts slowly, never still
+  $('#leak').style.setProperty('--x', `${50 + 18 * Math.sin(t * .23)}%`);
+  $('#glow').style.opacity = .8 + .2 * Math.sin(t * .9);
+
+  // hook: finished at frame one, breathes, leaves fast
+  const hx = in3(P(t, 1.7, .32)), hk = $('#hook');
+  st(hk, 1 - hx, `translateY(${-160 * hx}px) scale(${1 + .03 * P(t, 0, 1.8)})`, `blur(${12 * hx}px)`);
+
+  // phone: rises in under the hook, sinks away at the end
+  const pin = back(P(t, 2.0, .65)), pout = in3(P(tEnd, 0, .4));
+  st($('#phone'), clamp(P(t, 2.0, .2)) * (1 - pout), `translateY(${-(1 - pin) * 80 - pout * 70}px) scale(${(.94 + .06 * pin) * (1 - pout * .1)})`);
+
+  // clock: every hour the digits roll in like a split-flap board
+  const cvis = clamp(P(t, B[0] - .05, .2)) * (1 - out3(P(tEnd, 0, .3)));
+  $('#clock').style.opacity = cvis; $('#clock').style.transform = `translateY(${-40 * out3(P(tEnd, 0, .3))}px)`;
+  const cur = h >= 0 ? HOURS[h][0] : HOURS[0][0], prev = h > 0 ? HOURS[h - 1][0] : '     ';
+  slots.forEach((s, j) => {
+    const [a, c] = $$('span', s), p = h >= 0 ? outX(P(u, j * .05, .42)) : 0;
+    a.textContent = prev[j] === ' ' ? '' : prev[j]; c.textContent = cur[j];
+    if (prev[j] === cur[j] && h > 0) { st(a, 0); st(c, 1); return; }
+    st(a, 1 - p, `translateY(${-100 * p}%)`, `blur(${6 * p}px)`); st(c, p, `translateY(${100 * (1 - p)}%)`, `blur(${6 * (1 - p)}px)`);
+  });
+  $$('#job span').forEach((s, i) => {
+    const on = i === h ? out3(P(u, .1, .45)) : 0, off = i === h - 1 ? 1 - P(u, 0, .2) : 0, v = Math.max(on, off);
+    st(s, v * (1 - out3(P(tEnd, 0, .3))), `translateY(${i === h ? 24 * (1 - on) : -24 * (1 - off)}px)`, `blur(${(1 - v) * 10}px)`);
+  });
+
+  // chat: one conversation all day. Each new message lands on the input bar and pushes the older ones up, like a real chat
+  let bot = 0; // pure function of time: the bottom of the newest message, eased
+  SCENES.forEach((_, i) => {
+    const sc = $('#sc' + i), lu = t - B[i], day = $('.day', sc);
+    sc.style.visibility = t >= B[i] ? 'visible' : 'hidden';
+    day.style.opacity = P(lu, 0, .3);
+    bot += (day.offsetTop + day.offsetHeight - bot) * out3(P(lu, 0, .4));
+    [...sc.children].forEach((el) => { if (el.dataset.k) bot += (el.offsetTop + el.offsetHeight - bot) * out3(P(lu, MSG[i][+el.dataset.k], .4)); });
+    $$('[data-k]', sc).forEach((el) => {
+      const k = +el.dataset.k, at = MSG[i][k], p = back(P(lu, at, .38)), q = P(lu, at, .2);
+      if (el.classList.contains('ring')) { el.style.opacity = q * (1 - P(lu, TAP[i], .15)) * (.7 + .3 * Math.sin(lu * 12)); return; }
+      if (el.parentElement.classList.contains('card') && k > 0) { st(el, q, `translateY(${10 * (1 - out3(q))}px)`); return; }
+      const side = el.classList.contains('out') ? 1 : -1;
+      st(el, q, `translate(${side * 18 * (1 - p)}px, ${26 * (1 - p)}px) scale(${.96 + .04 * p})`);
+    });
+    $$('[data-f]', sc).forEach((f) => { const k = i === 3 ? 3 : 1; f.style.opacity = P(lu, MSG[i][k], .3); });
+  });
+  $('#feed').style.transform = `translateY(${$('#chat').clientHeight - 24 - bot}px)`;
+  $('#sbt').textContent = HOURS[h === -2 ? 4 : Math.max(h, 0)][0].replace(/^0/, ''); // the phone's own clock shows the same hour
+  // the one tap of each hour changes something you can see
+  const hourLu = (i) => t - B[i];
+  { const lu = hourLu(1), s = out3(P(lu, TAP[1] + .05, .35));
+    $('#inv').style.setProperty('--s', s); $('#inv').style.opacity = 1 - .45 * s;
+    st($('#dn'), s, `scale(${.6 + .4 * back(s)})`); $('#kb').style.opacity = 1 - .75 * s;
+    $('#b-done').style.transform = `scale(${1 - .06 * Math.sin(Math.PI * P(lu, TAP[1] - .05, .2))})`; }
+  { const lu = hourLu(2), s = P(lu, TAP[2] + .05, .2);
+    $('#pl').style.opacity = 1 - s; st($('#lv'), s, `scale(${.7 + .3 * back(s)})`);
+    $('#b-live').style.transform = `scale(${1 - .06 * Math.sin(Math.PI * P(lu, TAP[2] - .05, .2))})`;
+    $$('#fxd i').forEach((d, j) => (d.style.transform = `translateY(${-6 * Math.max(0, Math.sin(lu * 9 - j * .7))}px)`)); }
+  { const lu = hourLu(3);
+    $$('#sc3 .bar').forEach((bar, j) => { const q = out3(P(lu, MSG[3][3] + .15 + j * .12, .35)); st(bar, q, `translateX(${20 * (1 - q)}px)`); }); }
+  { const lu = hourLu(4), live = P(lu, MSG[4][1], .2) * (1 - P(lu, 2.75, .2));
+    $('#b-call').style.transform = `scale(${1 - .06 * Math.sin(Math.PI * P(lu, TAP[4] - .05, .2))})`;
+    $$('#wave i').forEach((w, j) => (w.style.height = `${12 + 70 * live * Math.abs(Math.sin(lu * 7.3 + j * .55) * Math.sin(lu * 2.1 + j * 1.7))}px`));
+    $('#ct').textContent = lu < 2.8 ? 'Live call' : 'Call ended'; $('#lvdot').style.opacity = lu < 2.8 ? .6 + .4 * Math.sin(lu * 8) : .25; }
+
+  // the / menu (18:00): pops above the input, closes on the tap
+  { const lu = hourLu(3), o = h === 3 ? back(P(lu, MSG[3][0], .3)) * (1 - P(lu, TAP[3] + .12, .15)) : 0;
+    st($('#menu'), clamp(o), `translateY(${30 * (1 - clamp(o))}px)`);
+    $('#m-money').style.background = h === 3 && lu > TAP[3] - .1 && lu < TAP[3] + .25 ? 'rgba(201,146,62,.35)' : 'transparent'; }
+
+  // header: "typing…" while the agent works
+  const typ = h >= 0 && u > TYPING[h][0] && u < TYPING[h][1] ? 1 : 0;
+  $('#typ').style.opacity = typ; $('#on').style.opacity = 1 - typ;
+  $$('#typ .dots i').forEach((d, j) => (d.style.transform = `translateY(${-5 * Math.max(0, Math.sin(t * 9 - j * .7))}px)`));
+
+  // finger: arrives on the button, presses, ripples, leaves
+  const tap = h >= 0 && TAP[h] != null ? TAP[h] : null, tid = ['', 'b-done', 'b-live', 'm-money', 'b-call'][h] || '';
+  if (tap != null && u > tap - .35 && u < tap + .5) {
+    const r = $('#' + tid).getBoundingClientRect(), x = r.right - 44, y = r.top + r.height * .62; // right end of the button: its word stays readable
+    const a = out3(P(u, tap - .35, .25)), pr = Math.sin(Math.PI * P(u, tap - .05, .2)), gone = P(u, tap + .25, .25);
+    $('#touch').style.left = `${x + 40 * (1 - a)}px`; $('#touch').style.top = `${y + 60 * (1 - a)}px`;
+    st($('#touch'), a * (1 - gone), `scale(${1 - .18 * pr})`);
+    const rp = P(u, tap, .45); $('#rip').style.left = `${x}px`; $('#rip').style.top = `${y}px`; st($('#rip'), rp > 0 ? (1 - rp) * .9 : 0, `scale(${1 + 1.4 * out3(rp)})`);
+  } else { st($('#touch'), 0); st($('#rip'), 0); }
+
+  // flow: the gold dot runs the line; each station lights when it does its part
+  const fv = clamp(P(t, 2.0, .4)) * (1 - out3(P(tEnd, 1.5, .4))); // arrives with the phone: the hook stands alone
+  $('#flow').style.opacity = fv;
+  const lit = KEYS.map((k, i) => {
+    if (tEnd >= 0) return out3(P(tEnd, i * .1, .25));                 // end: the whole line lights up
+    if (h < 0 || (k === 'claude' && !CLAUDE[h])) return 0;
+    return P(u, N[k], .2) * (1 - .7 * P(u, 4.45, .3));
+  });
+  nodes.forEach((n, i) => {
+    const L = lit[i], pop = i === 4 && h >= 0 && tEnd < 0 ? Math.sin(Math.PI * P(u, N.done, .3)) : 0;
+    n.style.boxShadow = `inset 0 0 0 ${2.5 + L}px rgba(${L > .01 ? '201,146,62' : '255,255,255'},${.18 + .82 * L}), 0 0 ${30 * L}px rgba(201,146,62,${.5 * L})`;
+    n.style.background = `rgba(${Math.round(21 + 40 * L)},${Math.round(18 + 22 * L)},${Math.round(14 + 4 * L)},1)`;
+    n.style.color = L > .5 ? '#F3D49A' : 'rgba(255,255,255,.45)'; n.style.transform = `scale(${1 + .14 * pop})`;
+    n.style.filter = i === 1 || i === 3 ? `saturate(${.25 + .75 * L}) brightness(${.6 + .4 * L})` : 'none';
+    if (i === 3) n.querySelector('svg').style.filter = `drop-shadow(0 0 ${14 * L}px rgba(217,119,87,${.95 * L}))`; // Claude glows orange when it works
+    labs[i].style.color = `rgba(255,255,255,${.5 + .5 * L})`;
+  });
+  lines.forEach((l, i) => {
+    const a = N[KEYS[i]], z = N[KEYS[i + 1]], f = tEnd >= 0 ? out3(P(tEnd, i * .1, .2)) : h < 0 ? 0 : out3(P(u, a, z - a)) * (1 - .7 * P(u, 4.45, .3));
+    l.style.height = `${100 * f}%`;
+  });
+  // the trigger station shows what started this hour
+  $('#trg').innerHTML = ico(h >= 0 ? HOURS[h][2] : (tEnd >= 0 ? 'i-user' : 'i-clock'));
+  trigLabs.forEach((s, i) => (s.style.opacity = (h >= 0 ? i === h : (tEnd >= 0 ? i === 5 : i === 0)) ? 1 : 0));
+  // the dot: from the trigger to Done, along the line
+  if (h >= 0 && tEnd < 0 && u > N.trig && u < N.done + .15) {
+    const ts = KEYS.map((k) => N[k]); let y = NY[4];
+    for (let i = 0; i < 4; i++) if (u < ts[i + 1]) { y = NY[i] + (NY[i + 1] - NY[i]) * inOut(P(u, ts[i], ts[i + 1] - ts[i])); break; }
+    $('#dot').style.top = `${y}px`; st($('#dot'), P(u, N.trig, .1) * (1 - P(u, N.done, .15)));
+  } else st($('#dot'), 0);
+
+  // end: five jobs pop, fly into one chat, then the line
+  const e = tEnd;
+  jis.forEach((j, k) => {
+    const pin = back(P(e, .35 + k * .15, .4)), fly = inOut(P(e, 1.6, .38)), x0 = 180 + k * 180;
+    j.style.left = `${x0 + (540 - x0) * fly}px`;
+    st(j, e < 0 ? 0 : clamp(P(e, .35 + k * .15, .15)) * (1 - P(e, 1.85, .12)), `translateY(${40 * (1 - pin) + 130 * fly}px) scale(${(.5 + .5 * pin) * (1 - .7 * fly)})`);
+  });
+  const bp = back(P(e, 1.88, .45));
+  st($('#bub'), e < 0 ? 0 : clamp(P(e, 1.88, .1)), `translateY(${-8 * Math.sin(Math.max(0, e - 2.4) * 1.6)}px) scale(${.3 + .7 * bp})`);
+  const j5 = back(P(e, 2.05, .45)), c1 = out3(P(e, 2.25, .5));
+  st($('#jobs5'), e < 0 ? 0 : clamp(P(e, 2.05, .12)), `scale(${1.25 - .25 * j5})`);
+  st($('#chat1'), e < 0 ? 0 : c1, `translateY(${30 * (1 - c1)}px)`, `blur(${10 * (1 - c1)}px)`);
+  const cr = out3(P(e, 2.6, .5));
+  st($('#credit'), e < 0 ? 0 : cr, `translateY(${16 * (1 - cr)}px)`);
+  $('#end').style.visibility = e < 0 ? 'hidden' : 'visible';
+};
+seek(parseFloat(new URLSearchParams(location.search).get('t') || '0')); // ?t=12 shows second 12
+</script>
+</body></html>
